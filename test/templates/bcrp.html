@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Datos BCRP - Dashboard</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        .btn-volver { display: inline-block; margin-bottom: 20px; text-decoration: none; color: #3498db; font-weight: bold; }
+        .btn-volver:hover { color: #2980b9; }
+        .card { background: #e8f4f8; border-left: 4px solid #3498db; padding: 15px; margin-bottom: 20px; border-radius: 4px; }
+        .card-title { margin: 0 0 5px 0; font-size: 14px; color: #555; }
+        .card-value { margin: 0; font-size: 24px; font-weight: bold; color: #2c3e50; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #f8f9fa; color: #333; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        tr:hover { background-color: #f1f1f1; }
+        .alerta { color: #e74c3c; font-weight: bold; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="btn-volver">← Volver al inicio</a>
+        <h2>Tipo de Cambio del Dólar (BCRP)</h2>
+        
+        <div class="card" id="tarjeta-resumen" style="display: none;">
+            <p class="card-title">Último valor registrado (Venta)</p>
+            <p class="card-value">S/ <span id="ultimo-valor">--</span></p>
+        </div>
+
+        <table id="tabla-bcrp">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Tipo de Cambio (S/)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td colspan="2" style="text-align: center;">Cargando datos económicos...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        fetch('/api/bcrp')
+            .then(respuesta => respuesta.json())
+            .then(datos => {
+                const tbody = document.querySelector('#tabla-bcrp tbody');
+                tbody.innerHTML = ''; 
+
+                // El BCRP envía los datos dentro del arreglo "periods"
+                const periodos = datos.periods;
+
+                if (!periodos || periodos.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="2" class="alerta">No hay datos disponibles.</td></tr>';
+                    return;
+                }
+
+                // Actualizar la tarjeta superior con el registro más reciente
+                const ultimoRegistro = periodos[periodos.length - 1];
+                document.getElementById('ultimo-valor').textContent = ultimoRegistro.values[0];
+                document.getElementById('tarjeta-resumen').style.display = 'block';
+
+                // Llenar la tabla invertida para ver la fecha más reciente primero
+                periodos.slice().reverse().forEach(dia => {
+                    const fila = document.createElement('tr');
+                    fila.innerHTML = `
+                        <td>${dia.name}</td>
+                        <td><strong>S/ ${dia.values[0]}</strong></td>
+                    `;
+                    tbody.appendChild(fila);
+                });
+            })
+            .catch(error => {
+                document.querySelector('#tabla-bcrp tbody').innerHTML = '<tr><td colspan="2" class="alerta">Error al conectar con el BCRP.</td></tr>';
+            });
+    </script>
+</body>
+</html>

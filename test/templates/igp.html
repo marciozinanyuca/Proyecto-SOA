@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Sismos IGP</title>
+    <style>
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <h2>Monitoreo Sísmico (IGP)</h2>
+    <a href="/">Volver al inicio</a>
+    
+    <table id="tabla-sismos">
+        <thead>
+            <tr>
+                <th>Fecha Local</th>
+                <th>Magnitud</th>
+                <th>Profundidad</th>
+                <th>Referencia (Ubicación)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td colspan="4">Cargando alertas sísmicas...</td></tr>
+        </tbody>
+    </table>
+
+    <script>
+        fetch('/api/igp')
+            .then(respuesta => respuesta.json())
+            .then(datos => {
+                const tbody = document.querySelector('#tabla-sismos tbody');
+                tbody.innerHTML = ''; // Limpiamos el mensaje de "Cargando"
+
+                // Suponiendo que la API del IGP devuelve un arreglo de sismos o un objeto con una propiedad que los contiene.
+                // Ajusta "datos" si el JSON tiene otra estructura principal (ej. datos.data o datos.features)
+                
+                // Iteramos sobre los primeros 10 sismos
+                datos.slice(0, 10).forEach(sismo => {
+                    const fila = document.createElement('tr');
+                    
+                    // Extraemos los campos exactos del JSON (estos nombres dependen de cómo venga la API del IGP)
+                    fila.innerHTML = `
+                        <td>${sismo.fechaLocal || 'N/A'}</td>
+                        <td><strong>${sismo.magnitud || 'N/A'}</strong></td>
+                        <td>${sismo.profundidad || 'N/A'} km</td>
+                        <td>${sismo.referencia || 'N/A'}</td>
+                    `;
+                    tbody.appendChild(fila);
+                });
+            })
+            .catch(error => {
+                document.querySelector('#tabla-sismos tbody').innerHTML = '<tr><td colspan="4">Error al cargar los datos</td></tr>';
+            });
+    </script>
+</body>
+</html>

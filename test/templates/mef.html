@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Datos MEF - Dashboard</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); overflow-x: auto; }
+        h2 { color: #2c3e50; border-bottom: 2px solid #27ae60; padding-bottom: 10px; }
+        .btn-volver { display: inline-block; margin-bottom: 20px; text-decoration: none; color: #27ae60; font-weight: bold; }
+        .btn-volver:hover { color: #2ecc71; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; font-size: 14px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #f8f9fa; color: #333; text-transform: capitalize; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        tr:hover { background-color: #f1f1f1; }
+        .alerta { color: #e74c3c; font-weight: bold; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="btn-volver">← Volver al inicio</a>
+        <h2>Ejecución Presupuestal (MEF)</h2>
+        
+        <table id="tabla-mef">
+            <thead>
+                <tr id="cabecera-tabla">
+                    <!-- Las columnas se generarán automáticamente desde JavaScript -->
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td class="alerta" id="mensaje-carga">Cargando datos del MEF...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+<script>
+        fetch('/api/mef')
+            .then(respuesta => respuesta.json())
+            .then(datos => {
+                const tbody = document.querySelector('#tabla-mef tbody');
+                const thead = document.querySelector('#cabecera-tabla');
+                tbody.innerHTML = ''; 
+                
+                // 1. Verificamos si Python nos envió un mensaje de error personalizado
+                if (datos.error) {
+                    tbody.innerHTML = `<tr><td class="alerta">Error: ${datos.error}</td></tr>`;
+                    return;
+                }
+
+                const registros = datos.result?.records;
+
+                // 2. Verificamos si la base de datos existe pero está vacía
+                if (!registros || registros.length === 0) {
+                    tbody.innerHTML = '<tr><td class="alerta">No se encontraron registros presupuestales. El ID de la base de datos podría haber caducado.</td></tr>';
+                    return;
+                }
+
+                const columnasTotales = Object.keys(registros[0]).filter(col => col !== '_id');
+                const columnasMostrar = columnasTotales.slice(0, 5); 
+
+                columnasMostrar.forEach(col => {
+                    const th = document.createElement('th');
+                    th.textContent = col.replace(/_/g, ' '); 
+                    thead.appendChild(th);
+                });
+
+                registros.forEach(filaData => {
+                    const fila = document.createElement('tr');
+                    
+                    columnasMostrar.forEach(col => {
+                        const td = document.createElement('td');
+                        const valor = filaData[col];
+                        td.textContent = (typeof valor === 'number') ? valor.toLocaleString('es-PE') : (valor || 'N/A');
+                        fila.appendChild(td);
+                    });
+                    
+                    tbody.appendChild(fila);
+                });
+            })
+            .catch(error => {
+                document.querySelector('#mensaje-carga').textContent = 'Error crítico al conectar con el backend (Flask).';
+                console.error("Detalle técnico:", error);
+            });
+    </script>
+</body>
+</html>
