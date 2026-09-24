@@ -95,12 +95,10 @@ from flask import request
 @app.route('/api/oefa')
 def obtener_oefa():
     try:
-        # Consulta directamente el catálogo oficial de OEFA en la plataforma nacional
-        # Este endpoint busca los paquetes y datasets publicados por OEFA
-        url = "https://www.datosabiertos.gob.pe/api/3/action/package_search?q=oefa+multas&rows=5"
+        url = "https://api.datosabiertos.oefa.gob.pe/api/v2/dashboards/EVALU-AMBIE-QUE-DETER-CAUSA.json/?auth_key=5LPg7QMTxbCz41LY04IbQ9ZLXrg9sPQwOUUU08O6"
         
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
             "Accept": "application/json"
         }
         
@@ -110,14 +108,17 @@ def obtener_oefa():
             datos = respuesta.json()
             return jsonify({
                 "estado": "exito",
-                "total_datasets_encontrados": datos.get("result", {}).get("count", 0),
-                "datasets": datos.get("result", {}).get("results", [])
+                "datos_dashboard": datos # Mandamos todo el dashboard
             })
         else:
-            return jsonify({"error": "No se pudo conectar con el catálogo", "status": respuesta.status_code}), respuesta.status_code
+            return jsonify({"error": "Error del servidor de OEFA", "status": respuesta.status_code}), respuesta.status_code
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+
+    
 
 # --- RUTA PARA LA PÁGINA VISUAL ---
 @app.route('/pagina-sectores')
