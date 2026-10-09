@@ -144,7 +144,7 @@ components:
           type: string
           format: date
         value:
-          type: number
+          type: numberh
           format: double
           example: 3.2
         variationPercent:

@@ -1,10 +1,13 @@
 export const BASE_URL = 'http://localhost:8080'
 
 export type IndicatorCode =
+  | 'PN01271PM'
+  | 'PN01206PM'
   | 'INFLATION'
   | 'GDP'
   | 'EXCHANGE_RATE'
   | 'INTEREST_RATE'
+  | (string & {})
 
 export type InfractionSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
 

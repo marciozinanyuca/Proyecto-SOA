@@ -13,6 +13,8 @@ import type {
 import './App.css'
 
 const indicatorOptions: { value: IndicatorCode; label: string }[] = [
+  { value: 'PN01271PM', label: 'IPC - Inflación mensual (PN01271PM)' },
+  { value: 'PN01206PM', label: 'Tipo de cambio mensual (PN01206PM)' },
   { value: 'INFLATION', label: 'Inflación' },
   { value: 'GDP', label: 'PBI' },
   { value: 'EXCHANGE_RATE', label: 'Tipo de cambio' },
@@ -24,20 +26,32 @@ function errorMessage(error: unknown): string {
 }
 
 function formatDate(date: string): string {
-  return new Intl.DateTimeFormat('es-PE', { dateStyle: 'medium' }).format(
-    new Date(`${date.slice(0, 10)}T00:00:00`),
-  )
+  if (!date) return '—'
+  const parts = date.split('-')
+  if (parts.length === 3) {
+    const year = parseInt(parts[0], 10)
+    const month = parseInt(parts[1], 10) - 1
+    const day = parseInt(parts[2], 10)
+    return new Intl.DateTimeFormat('es-PE', { dateStyle: 'medium' }).format(new Date(year, month, day))
+  }
+  if (parts.length === 2) {
+    const year = parseInt(parts[0], 10)
+    const month = parseInt(parts[1], 10) - 1
+    return new Intl.DateTimeFormat('es-PE', { year: 'numeric', month: 'short' }).format(new Date(year, month, 1))
+  }
+  const parsed = new Date(date)
+  return isNaN(parsed.getTime()) ? date : new Intl.DateTimeFormat('es-PE', { dateStyle: 'medium' }).format(parsed)
 }
 
 function formatNumber(value: number): string {
-  return new Intl.NumberFormat('es-PE', { maximumFractionDigits: 2 }).format(value)
+  return new Intl.NumberFormat('es-PE', { maximumFractionDigits: 4 }).format(value)
 }
 
 function App() {
-  const [indicatorCode, setIndicatorCode] = useState<IndicatorCode>('INFLATION')
+  const [indicatorCode, setIndicatorCode] = useState<IndicatorCode>('PN01271PM')
   const [companyId, setCompanyId] = useState('20123456789')
-  const [startDate, setStartDate] = useState('2025-01-01')
-  const [endDate, setEndDate] = useState('2025-12-31')
+  const [startDate, setStartDate] = useState('2023-01-01')
+  const [endDate, setEndDate] = useState('2023-12-31')
   const [includeResolved, setIncludeResolved] = useState(false)
 
   const [macroData, setMacroData] = useState<MacroeconomicDataResponse | null>(null)
@@ -85,11 +99,18 @@ function App() {
     setRiskLoading(true)
     setRiskError('')
     try {
+      const esgIndicator =
+        indicatorCode === 'PN01271PM'
+          ? 'INFLATION'
+          : indicatorCode === 'PN01206PM'
+            ? 'EXCHANGE_RATE'
+            : indicatorCode
+
       setRiskData(
         await calculateEsgRisk({
           companyId,
           period: { startDate, endDate },
-          indicatorCode,
+          indicatorCode: esgIndicator,
           includeResolvedInfractions: includeResolved,
         }),
       )
@@ -204,9 +225,9 @@ function App() {
                   <div className="result-meta">
                     <span>{macroData.source}</span>
                     <strong>{macroData.indicatorName}</strong>
-                    <small>Unidad: {macroData.unit}</small>
+                    <small>Código: {macroData.indicatorCode} · Unidad: {macroData.unit}</small>
                   </div>
-                  {macroData.values.length ? (
+                  {macroData.values && macroData.values.length > 0 ? (
                     <div className="table-scroll">
                       <table>
                         <thead><tr><th>Fecha</th><th>Valor</th><th>Variación</th></tr></thead>
