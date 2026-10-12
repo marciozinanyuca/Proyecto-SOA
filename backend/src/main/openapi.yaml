@@ -1,0 +1,68 @@
+openapi: 3.0.3
+info:
+  title: EcoInvest Perú API
+  description: API Orquestadora para integración de SENACE y BCRP
+  version: 1.0.0
+servers:
+  - url: http://localhost:8081
+paths:
+  /api/dashboard:
+    get:
+      summary: Obtener datos del dashboard consolidados
+      operationId: obtenerDashboard
+      parameters:
+        - name: sector
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "Hidrocarburos"
+        - name: anio
+          in: query
+          required: false
+          schema:
+            type: integer
+            example: 2017
+      responses:
+        '200':
+          description: Datos consolidados obtenidos exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardResponse'
+  /api/estado-servicios:
+    get:
+      summary: Obtener estado de los Circuit Breakers
+      operationId: obtenerEstadoServicios
+      responses:
+        '200':
+          description: Estado de los servicios obtenido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstadoServiciosResponse'
+
+components:
+  schemas:
+    DashboardResponse:
+      type: object
+      properties:
+        total:
+          type: integer
+        aprobados:
+          type: integer
+        variacionSeleccionada:
+          type: number
+        proyectos:
+          type: array
+          items:
+            type: object
+        fuentes:
+          type: object
+    EstadoServiciosResponse:
+      type: object
+      properties:
+        senace:
+          type: object
+        bcrp:
+          type: object
