@@ -3,18 +3,14 @@ package com.ecoinvest.soa.config;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.web.client.RestTemplate;
 
-@SpringBootTest
 class AppConfigTest {
-
-    @Autowired
-    private RestTemplate restTemplate;
 
     @Test
     void restTemplateBeanIsConfigured() {
+        RestTemplate restTemplate = new AppConfig().restTemplate(new RestTemplateBuilder());
         assertThat(restTemplate).isNotNull();
     }
 }

@@ -31,3 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Local external API configuration (not loaded automatically by Spring Boot) ###
+/.env.apis.local

@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -48,17 +49,16 @@ public class SenaceClient {
     // =========================================================================
 
     @CircuitBreaker(name = "senace", fallbackMethod = "fallbackSenace")
-    @SuppressWarnings("unchecked")
     public List<Map<String, Object>> obtenerProyectos(String sector, Integer anio) {
         String url = construirUrlDatastream("CarteraProyectos");
-        log.info("Consultando API oficial de SENACE (CarteraProyectos) para sector: {}, anio: {} en: {}", sector, anio, url);
+        log.info("Consultando SENACE: CarteraProyectos");
 
-        Map<String, Object> response = restTemplate.getForObject(url, Map.class);
+        Map<String, Object> response = consultarDatos(url);
         if (response == null || response.isEmpty()) {
             throw new RuntimeException("Respuesta vacía del datastream CarteraProyectos de SENACE");
         }
 
-        List<Map<String, Object>> proyectos = construirProyectosBase("API_DIRECTA_SENACE");
+        List<Map<String, Object>> proyectos = construirProyectosBase("SIMULADO");
         return filtrarPorSectorYAnio(proyectos, sector, anio);
     }
 
@@ -72,17 +72,16 @@ public class SenaceClient {
     // =========================================================================
 
     @CircuitBreaker(name = "senace", fallbackMethod = "fallbackConsultoras")
-    @SuppressWarnings("unchecked")
     public List<Map<String, Object>> obtenerConsultoras() {
         String url = construirUrlDatastream("ConsultorasAmbientales");
-        log.info("Consultando API oficial de SENACE (ConsultorasAmbientales) en: {}", url);
+        log.info("Consultando SENACE: ConsultorasAmbientales");
 
-        Map<String, Object> response = restTemplate.getForObject(url, Map.class);
+        Map<String, Object> response = consultarDatos(url);
         if (response == null || response.isEmpty()) {
             throw new RuntimeException("Respuesta vacía del datastream ConsultorasAmbientales de SENACE");
         }
 
-        return construirConsultorasBase("API_DIRECTA_SENACE");
+        return construirConsultorasBase("SIMULADO");
     }
 
     // =========================================================================
@@ -90,13 +89,12 @@ public class SenaceClient {
     // =========================================================================
 
     @CircuitBreaker(name = "senace", fallbackMethod = "fallbackDatastreamGenerico")
-    @SuppressWarnings("unchecked")
     public Map<String, Object> consultarDatastream(String datastreamGuid) {
         String guidValido = (datastreamGuid != null && !datastreamGuid.isBlank()) ? datastreamGuid : "CarteraProyectos";
         String url = construirUrlDatastream(guidValido);
-        log.info("Consultando datastream SENACE '{}' en: {}", guidValido, url);
+        log.info("Consultando datastream SENACE");
 
-        Map<String, Object> response = restTemplate.getForObject(url, Map.class);
+        Map<String, Object> response = consultarDatos(url);
         Map<String, Object> resultado = new LinkedHashMap<>();
         resultado.put("datastream", guidValido);
         resultado.put("origen", "API_DIRECTA_SENACE");
@@ -111,8 +109,19 @@ public class SenaceClient {
                 .toUriString();
     }
 
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> consultarDatos(String url) {
+        try {
+            return restTemplate.getForObject(url, Map.class);
+        } catch (RestClientException e) {
+            // La excepción original puede incluir la URL autenticada y el cuerpo externo.
+            // No se conserva como causa para evitar su exposición en logs o respuestas.
+            throw new RestClientException("No se pudo consultar el servicio SENACE");
+        }
+    }
+
     // =========================================================================
-    // MÉTODOS DE FALLBACK (Resilience4j -> Respaldo Local SQLite)
+    // MÉTODOS DE FALLBACK (datos simulados en memoria, sin persistencia)
     // =========================================================================
 
     public List<Map<String, Object>> fallbackSenaceSimple(Throwable t) {
@@ -120,26 +129,23 @@ public class SenaceClient {
     }
 
     public List<Map<String, Object>> fallbackSenace(String sector, Integer anio, Throwable t) {
-        log.warn("Fallo al consultar la API de SENACE (sector: {}, anio: {}). Causa: {}. Activando fallback con SQLite local.",
-                sector, anio, t != null ? t.getMessage() : "Desconocida");
+        log.warn("Fallo al consultar proyectos SENACE; se devuelven datos simulados en memoria");
 
-        List<Map<String, Object>> proyectosRespaldo = construirProyectosBase("FALLBACK_SQLITE");
+        List<Map<String, Object>> proyectosRespaldo = construirProyectosBase("SIMULADO");
         return filtrarPorSectorYAnio(proyectosRespaldo, sector, anio);
     }
 
     public List<Map<String, Object>> fallbackConsultoras(Throwable t) {
-        log.warn("Fallo al consultar ConsultorasAmbientales de SENACE ({}). Activando fallback con SQLite local.",
-                t != null ? t.getMessage() : "Desconocida");
-        return construirConsultorasBase("FALLBACK_SQLITE");
+        log.warn("Fallo al consultar consultoras SENACE; se devuelven datos simulados en memoria");
+        return construirConsultorasBase("SIMULADO");
     }
 
     public Map<String, Object> fallbackDatastreamGenerico(String datastreamGuid, Throwable t) {
-        log.warn("Fallo al consultar datastream '{}' en SENACE ({}). Activando fallback local.",
-                datastreamGuid, t != null ? t.getMessage() : "Desconocida");
+        log.warn("Fallo al consultar datastream SENACE; no hay respaldo persistente implementado");
         Map<String, Object> fallback = new LinkedHashMap<>();
         fallback.put("datastream", datastreamGuid);
-        fallback.put("origen", "FALLBACK_SQLITE");
-        fallback.put("mensaje", "Datos recuperados de caché local SQLite por contingencia en SENACE");
+        fallback.put("origen", "NO_DISPONIBLE");
+        fallback.put("mensaje", "Servicio no disponible; no hay respaldo persistente implementado");
         fallback.put("datastreamsSoportados", DATASTREAMS_DISPONIBLES);
         return fallback;
     }

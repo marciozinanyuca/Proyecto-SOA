@@ -16,12 +16,14 @@ paths:
           required: true
           schema:
             type: string
+            description: BCRP usa series anuales para Agricultura, Pesca, Minería metálica, Hidrocarburos y Electricidad y Agua. TODOS usa PBI nacional. Energía, Transportes y sectores desconocidos no tienen serie aprobada.
             example: "Hidrocarburos"
         - name: anio
           in: query
           required: false
           schema:
             type: integer
+            default: 2017
             example: 2017
       responses:
         '200':
@@ -42,6 +44,40 @@ paths:
               schema:
                 $ref: '#/components/schemas/EstadoServiciosResponse'
 
+  /api/consultoras:
+    get:
+      summary: Obtener registro de consultoras ambientales
+      description: Los registros fijos actuales tienen origen SIMULADO, incluso en fallback.
+      operationId: obtenerConsultoras
+      responses:
+        '200':
+          description: Consultoras con procedencia explícita
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+  /api/senace/datastream:
+    get:
+      summary: Consultar un datastream de SENACE
+      operationId: consultarDatastream
+      parameters:
+        - name: nombre
+          in: query
+          required: false
+          schema:
+            type: string
+            default: CarteraProyectos
+      responses:
+        '200':
+          description: Respuesta externa o metadatos NO_DISPONIBLE sin respaldo persistente
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+
 components:
   schemas:
     DashboardResponse:
@@ -53,14 +89,74 @@ components:
           type: integer
         variacionSeleccionada:
           type: number
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: Variación porcentual interanual del PBI del ámbito económico indicado en indicadorBcrp, correspondiente exactamente al año solicitado. Coincide con indicadorBcrp.valor. Se omite cuando no existe observación; fuentes.bcrp indica NO_DISPONIBLE. Nunca se sustituye por constantes.
+        indicadorBcrp:
+          $ref: '#/components/schemas/IndicadorBcrp'
         proyectos:
           type: array
           items:
             type: object
         fuentes:
           type: object
+          description: Procedencia por servicio. SENACE usa SIMULADO para registros fijos; BCRP usa API_DIRECTA_BCRP o NO_DISPONIBLE.
+    IndicadorBcrp:
+      type: object
+      description: Observación anual oficial BCRP o ausencia justificada. TODOS es contexto nacional, no un agregado de la cartera SENACE. Los campos económicos no disponibles se omiten.
+      properties:
+        codigoSerie:
+          type: string
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: Código anual aprobado; se omite si el sector no tiene serie aprobada.
+        descripcion:
+          type: string
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: Denominación oficial de la serie, validada contra config.series de la respuesta.
+        unidad:
+          type: string
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: Variación porcentual interanual (%).
+        periodicidad:
+          type: string
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: ANUAL para todas las series aprobadas.
+        sectorSolicitado:
+          type: string
+          description: Sector solicitado en EcoInvest.
+        sectorEconomico:
+          type: string
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: Alcance real, por ejemplo Minería Metálica o Electricidad y Agua; no implica equivalencia exacta con todo el sector solicitado.
+        ambito:
+          type: string
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: SECTORIAL o NACIONAL. TODOS utiliza PBI nacional.
+        anioSolicitado:
+          type: integer
+          description: Año de consulta. Un año fuera de 1 a 9999 produce ausencia con motivo ANIO_INVALIDO, sin HTTP externo.
+        periodo:
+          type: string
+          pattern: '^[0-9]{4}$'
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: Año efectivo observado, exactamente igual al solicitado; se omite si falta valor.
+        valor:
+          type: number
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: Decimal oficial sin conversión intermedia a double. Se omite cuando falta la observación.
+        origen:
+          type: string
+          description: API_DIRECTA_BCRP o NO_DISPONIBLE; coherente con fuentes.bcrp.
+        motivo:
+          type: string
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: Se omite en éxito. SECTOR_NO_SOPORTADO, ANIO_INVALIDO, SIN_OBSERVACION, PERIODO_FUERA_DE_RANGO, FORMATO_INVALIDO o ERROR_EXTERNO explican la ausencia. ERROR_EXTERNO corresponde al fallback existente.
+        urlFuente:
+          type: string
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: URL de una sola serie con rango anual inicio=fin e idioma esp. Se omite si no puede construirse una consulta válida.
     EstadoServiciosResponse:
       type: object
+      description: Métricas de circuit breakers. respaldoLocal es NO_IMPLEMENTADO; no acredita disponibilidad de SQLite.
       properties:
         senace:
           type: object

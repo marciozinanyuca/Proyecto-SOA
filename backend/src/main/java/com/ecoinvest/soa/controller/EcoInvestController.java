@@ -3,6 +3,7 @@ package com.ecoinvest.soa.controller;
 import com.ecoinvest.api.ApiApi;
 import com.ecoinvest.model.DashboardResponse;
 import com.ecoinvest.model.EstadoServiciosResponse;
+import com.ecoinvest.model.IndicadorBcrp;
 import com.ecoinvest.soa.client.BcrpClient;
 import com.ecoinvest.soa.client.SenaceClient;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
@@ -14,8 +15,6 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -48,16 +47,40 @@ public class EcoInvestController implements ApiApi {
                 .filter(p -> "Aprobado".equalsIgnoreCase(String.valueOf(p.get("estado"))))
                 .count();
 
-        double variacion = -2.45;
-        if (datosBcrp != null && datosBcrp.get("variacionSeleccionada") instanceof Number num) {
-            variacion = num.doubleValue();
+        BigDecimal variacion = null;
+        if (datosBcrp != null && datosBcrp.get("valor") instanceof BigDecimal valor) {
+            variacion = valor;
         }
 
-        String origenSenace = proyectos.isEmpty() ? "FALLBACK_SQLITE"
-                : String.valueOf(proyectos.get(0).getOrDefault("origen", "FALLBACK_SQLITE"));
+        // El cliente actual construye registros fijos incluso cuando no hay coincidencias.
+        String origenSenace = proyectos.isEmpty() ? "SIMULADO"
+                : String.valueOf(proyectos.get(0).getOrDefault("origen", "NO_DISPONIBLE"));
         String origenBcrp = datosBcrp != null
-                ? String.valueOf(datosBcrp.getOrDefault("origen", "FALLBACK_SQLITE"))
-                : "FALLBACK_SQLITE";
+                ? String.valueOf(datosBcrp.getOrDefault("origen", "NO_DISPONIBLE"))
+                : "NO_DISPONIBLE";
+        if (variacion == null) {
+            origenBcrp = "NO_DISPONIBLE";
+        }
+
+        IndicadorBcrp indicador = new IndicadorBcrp();
+        indicador.setSectorSolicitado(sectorFiltro);
+        indicador.setAnioSolicitado(anioFiltro);
+        indicador.setOrigen(origenBcrp);
+        indicador.setValor(variacion);
+        if (datosBcrp != null) {
+            indicador.setCodigoSerie((String) datosBcrp.get("codigoSerie"));
+            indicador.setDescripcion((String) datosBcrp.get("descripcion"));
+            indicador.setUnidad((String) datosBcrp.get("unidad"));
+            indicador.setPeriodicidad((String) datosBcrp.get("periodicidad"));
+            indicador.setSectorEconomico((String) datosBcrp.get("sectorEconomico"));
+            indicador.setAmbito((String) datosBcrp.get("ambito"));
+            indicador.setUrlFuente((String) datosBcrp.get("urlFuente"));
+            indicador.setPeriodo(variacion != null ? (String) datosBcrp.get("periodo") : null);
+            indicador.setMotivo(variacion == null
+                    ? (String) datosBcrp.getOrDefault("motivo", "SIN_OBSERVACION") : null);
+        } else {
+            indicador.setMotivo("ERROR_EXTERNO");
+        }
 
         Map<String, Object> fuentes = new LinkedHashMap<>();
         fuentes.put("senace", origenSenace);
@@ -68,7 +91,8 @@ public class EcoInvestController implements ApiApi {
         DashboardResponse response = new DashboardResponse();
         response.setTotal(total);
         response.setAprobados(aprobados);
-        response.setVariacionSeleccionada(BigDecimal.valueOf(variacion));
+        response.setVariacionSeleccionada(variacion);
+        response.setIndicadorBcrp(indicador);
         response.setProyectos(new ArrayList<>(proyectos));
         response.setFuentes(fuentes);
 
@@ -85,15 +109,14 @@ public class EcoInvestController implements ApiApi {
     }
 
     // 3. Endpoint adicional para la Vista 4 (Directorio de Consultoras RNCA)
-    @GetMapping("/api/consultoras")
-    public ResponseEntity<List<Map<String, Object>>> obtenerConsultoras() {
-        return ResponseEntity.ok(senaceClient.obtenerConsultoras());
+    @Override
+    public ResponseEntity<List<Object>> obtenerConsultoras() {
+        return ResponseEntity.ok(new ArrayList<>(senaceClient.obtenerConsultoras()));
     }
 
     // 4. Endpoint adicional para consultar cualquiera de los 8 Datastreams de SENACE
-    @GetMapping("/api/senace/datastream")
-    public ResponseEntity<Map<String, Object>> consultarDatastream(
-            @RequestParam(defaultValue = "CarteraProyectos") String nombre) {
+    @Override
+    public ResponseEntity<Map<String, Object>> consultarDatastream(String nombre) {
         return ResponseEntity.ok(senaceClient.consultarDatastream(nombre));
     }
 
@@ -107,7 +130,7 @@ public class EcoInvestController implements ApiApi {
         info.put("tasaFallosPorcentaje", metrics.getFailureRate());
         info.put("llamadasFallidas", metrics.getNumberOfFailedCalls());
         info.put("llamadasExitosas", metrics.getNumberOfSuccessfulCalls());
-        info.put("respaldoLocal", "SQLite Activo (ecoinvest_fallback.db)");
+        info.put("respaldoLocal", "NO_IMPLEMENTADO");
         return info;
     }
 }
