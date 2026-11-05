@@ -9,6 +9,7 @@ paths:
   /api/dashboard:
     get:
       summary: Obtener datos del dashboard consolidados
+      description: SENACE se consulta una sola vez. Ante fallo se conserva el indicador BCRP disponible y se omiten métricas SENACE desconocidas. Los conteos describen registros filtrados evaluables, no proyectos únicos certificados.
       operationId: obtenerDashboard
       parameters:
         - name: sector
@@ -16,18 +17,19 @@ paths:
           required: true
           schema:
             type: string
-            description: BCRP usa series anuales para Agricultura, Pesca, Minería metálica, Hidrocarburos y Electricidad y Agua. TODOS usa PBI nacional. Energía, Transportes y sectores desconocidos no tienen serie aprobada.
-            example: "Hidrocarburos"
+            description: Actividad SENACE comparada con normalización explícita. BCRP conserva su catálogo anual aprobado; no se infieren equivalencias nuevas. TODOS conserva todas las actividades y el contexto PBI nacional.
+            example: Hidrocarburos
         - name: anio
           in: query
           required: false
+          description: Año de inicio derivado de FECHA_INICIO mediante dd/MM/uuuu estricto; nunca año de aprobación. Fechas no evaluables se informan como calidad de filtrado.
           schema:
             type: integer
             default: 2017
             example: 2017
       responses:
         '200':
-          description: Datos consolidados obtenidos exitosamente
+          description: Dashboard completo o degradado. consultaSenace distingue vacío oficial, ausencia de coincidencias, error y respuesta parcial. BCRP se mantiene independiente.
           content:
             application/json:
               schema:
@@ -35,32 +37,83 @@ paths:
   /api/estado-servicios:
     get:
       summary: Obtener estado de los Circuit Breakers
+      description: No consulta proveedores. Las métricas describen llamadas lógicas, incluidos fallos de configuración; no son una comprobación directa de disponibilidad externa.
       operationId: obtenerEstadoServicios
       responses:
         '200':
-          description: Estado de los servicios obtenido
+          description: Estado de los circuitos y métricas lógicas; respaldo local NO_IMPLEMENTADO.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/EstadoServiciosResponse'
-
   /api/consultoras:
     get:
-      summary: Obtener registro de consultoras ambientales
-      description: Los registros fijos actuales tienen origen SIMULADO, incluso en fallback.
+      summary: Obtener filas del recurso ConsultorasAmbientales
+      description: Conserva las filas sin deduplicación. No inventa RUC, registro, nivel, estado o ID y no deriva vigencia administrativa. Los opcionales vacíos se omiten. La raíz siempre es array; metadatos en headers expuestos por CORS.
       operationId: obtenerConsultoras
       responses:
         '200':
-          description: Consultoras con procedencia explícita
+          description: Filas oficiales o array oficial vacío, con procedencia independiente de la primera fila.
+          headers:
+            X-Senace-Origen:
+              $ref: '#/components/headers/SenaceOrigen'
+            X-Senace-Estado:
+              $ref: '#/components/headers/SenaceEstado'
+            X-Senace-Cobertura:
+              $ref: '#/components/headers/SenaceCobertura'
+            X-Senace-Motivo:
+              $ref: '#/components/headers/SenaceMotivo'
+            X-Senace-Cuerpo-Completo:
+              $ref: '#/components/headers/SenaceCuerpoCompleto'
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  type: object
+                  $ref: '#/components/schemas/ConsultoraSenacePublica'
+        '502':
+          description: JSON, codificación o estructura del proveedor inválidos. Cuerpo [] y motivo seguro.
+          headers:
+            X-Senace-Origen:
+              $ref: '#/components/headers/SenaceOrigen'
+            X-Senace-Estado:
+              $ref: '#/components/headers/SenaceEstado'
+            X-Senace-Cobertura:
+              $ref: '#/components/headers/SenaceCobertura'
+            X-Senace-Motivo:
+              $ref: '#/components/headers/SenaceMotivo'
+            X-Senace-Cuerpo-Completo:
+              $ref: '#/components/headers/SenaceCuerpoCompleto'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ConsultoraSenacePublica'
+        '503':
+          description: Configuración ausente, proveedor indisponible, circuito abierto o respuesta parcial no utilizable. Cuerpo [].
+          headers:
+            X-Senace-Origen:
+              $ref: '#/components/headers/SenaceOrigen'
+            X-Senace-Estado:
+              $ref: '#/components/headers/SenaceEstado'
+            X-Senace-Cobertura:
+              $ref: '#/components/headers/SenaceCobertura'
+            X-Senace-Motivo:
+              $ref: '#/components/headers/SenaceMotivo'
+            X-Senace-Cuerpo-Completo:
+              $ref: '#/components/headers/SenaceCuerpoCompleto'
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ConsultoraSenacePublica'
+
   /api/senace/datastream:
     get:
       summary: Consultar un datastream de SENACE
+      description: Conserva envolvente y recursos existentes. Los dos recursos verificados usan data array; proyectos no aplica filtro anual en esta ruta. Los otros seis conservan objeto y ruta heredados sin certificación de esquema o éxito semántico.
       operationId: consultarDatastream
       parameters:
         - name: nombre
@@ -69,24 +122,61 @@ paths:
           schema:
             type: string
             default: CarteraProyectos
+            description: CarteraProyectos, ConsultorasAmbientales, GastoEspecifica, GastoFuente, GastoGenerica, SolicitudAcceso, Visitas o Reclamos. Un nombre no reconocido produce ausencia segura sin HTTP externo.
       responses:
         '200':
-          description: Respuesta externa o metadatos NO_DISPONIBLE sin respaldo persistente
+          description: Documento admitido o array oficial vacío. consulta informa procedencia y cobertura; recursoValidado no certifica disponibilidad actual.
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: true
+                $ref: '#/components/schemas/DatastreamSenaceResponse'
+        '502':
+          description: Formato o estructura inválidos. data null, sin reenviar cuerpo externo.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatastreamSenaceResponse'
+        '503':
+          description: Indisponibilidad, configuración ausente, circuito abierto, recurso no admitido o respuesta parcial. data null.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatastreamSenaceResponse'
 
 components:
+  headers:
+    SenaceOrigen:
+      description: Procedencia de la consulta, independiente de que existan filas.
+      schema:
+        $ref: '#/components/schemas/OrigenSenace'
+    SenaceEstado:
+      description: Estado de la consulta, no del circuito ni de la vigencia de una empresa.
+      schema:
+        $ref: '#/components/schemas/EstadoConsultaSenace'
+    SenaceCobertura:
+      description: Recibir el cuerpo completo no acredita cobertura oficial del dataset.
+      schema:
+        $ref: '#/components/schemas/CoberturaSenace'
+    SenaceMotivo:
+      description: Motivo técnico seguro opcional; no contiene URI, cuerpo o mensaje externo.
+      schema:
+        $ref: '#/components/schemas/MotivoSenace'
+    SenaceCuerpoCompleto:
+      description: Evidencia del final del cuerpo HTTP; se omite cuando se desconoce. No acredita validez o cobertura.
+      schema:
+        type: boolean
   schemas:
     DashboardResponse:
       type: object
       properties:
         total:
           type: integer
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: Número de registros devueltos por los filtros, no proyectos únicos ni universo oficial. Se omite ante fallo SENACE.
         aprobados:
           type: integer
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: Registros Aprobado dentro de esa selección evaluable. Se omite si SENACE no está disponible.
         variacionSeleccionada:
           type: number
           x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
@@ -95,11 +185,231 @@ components:
           $ref: '#/components/schemas/IndicadorBcrp'
         proyectos:
           type: array
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: Registros SENACE filtrados. [] es una selección conocida vacía; se omite cuando la consulta falla. La calidad temporal limita la interpretación de un cero.
           items:
-            type: object
+            $ref: '#/components/schemas/ProyectoSenacePublico'
         fuentes:
-          type: object
-          description: Procedencia por servicio. SENACE usa SIMULADO para registros fijos; BCRP usa API_DIRECTA_BCRP o NO_DISPONIBLE.
+          $ref: '#/components/schemas/FuentesDashboard'
+        consultaSenace:
+          $ref: '#/components/schemas/ConsultaSenace'
+    FuentesDashboard:
+      type: object
+      properties:
+        senace:
+          $ref: '#/components/schemas/OrigenSenace'
+        bcrp:
+          type: string
+          description: API_DIRECTA_BCRP o NO_DISPONIBLE, independiente del resultado SENACE.
+        sectorConsultado:
+          type: string
+        anioConsultado:
+          type: integer
+    ProyectoSenacePublico:
+      type: object
+      description: Registro SENACE mapeado. ID solo se comprobó único en una respuesta observada; estabilidad global no certificada. No hay inversión, moneda, región o expediente inventados.
+      properties:
+        id:
+          type: integer
+          format: int64
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: ID oficial del registro, sin conversión intermedia a double.
+        titular:
+          type: string
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: TITULAR original no vacío.
+        ruc:
+          type: string
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: RUC textual; no convertir a número.
+        titulo:
+          type: string
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: Alias compatible de TITULO_PROYECTO.
+        proyecto:
+          type: string
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: Alias compatible de TITULO_PROYECTO.
+        unidadProyecto:
+          type: string
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: UNIDAD_PROYECTO; no equivale a expediente.
+        tipo:
+          type: string
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: TIPO original.
+        actividad:
+          type: string
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: ACTIVIDAD original; la clave de búsqueda no sustituye la etiqueta.
+        sector:
+          type: string
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: Alias de ACTIVIDAD, no equivalencia con catálogo económico BCRP.
+        fechaInicio:
+          type: string
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: FECHA_INICIO original. Interpretación dd/MM/uuuu aprobada; no fecha de aprobación.
+        anio:
+          type: integer
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: Año de inicio derivado; fecha normalizada utilizada internamente, no fecha de aprobación.
+        estado:
+          type: string
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: ESTADO original; Aprobado se cuenta solo en la selección filtrada.
+        descripcion:
+          type: string
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: DESCRIPCION original.
+        longitud:
+          type: number
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: Coordenada decimal; par validado bajo supuesto de grados, sin certificar CRS. Se omite si falta o es inválido.
+        latitud:
+          type: number
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: Coordenada decimal preservada sin double ni cero sustituto; rango global no acredita ubicación real.
+        resolucion:
+          type: string
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: RESOLUCION original, separada de expediente.
+        origen:
+          $ref: '#/components/schemas/OrigenSenace'
+    ConsultoraSenacePublica:
+      type: object
+      description: Una fila recibida, no una empresa única certificada. Ocho conceptos oficiales; fechas conservadas como texto, sin deduplicación o estado de vigencia derivado.
+      properties:
+        razonSocial:
+          type: string
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: RAZON_SOCIAL; no es un identificador único.
+        actividad:
+          type: string
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: ACTIVIDAD original, separada de SUBSECTOR.
+        subsector:
+          type: string
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: SUBSECTOR original.
+        tipoSolicitud:
+          type: string
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: TIPO_SOLICITUD; no equivale a nivel o estado.
+        resolucion:
+          type: string
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: RESOLUCION; no número de registro inferido.
+        fechaRd:
+          type: string
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: FECHA_RD original; formato y semántica administrativa no certificados.
+        inicioVigenciaRd:
+          type: string
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: INICIO_VIGENCIA_RD original; ausencia no implica regla administrativa.
+        finVigenciaRd:
+          type: string
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: FIN_VIGENCIA_RD original; vacío no implica vigencia indefinida.
+
+    ConsultaSenace:
+      type: object
+      x-class-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+      description: Metadatos independientes de las filas. Cuerpo completo no acredita cobertura; errores no aportan conteos cero ficticios. NO_EVALUABLE indica al menos una fecha relevante no evaluable.
+      properties:
+        estado:
+          $ref: '#/components/schemas/EstadoConsultaSenace'
+        origen:
+          $ref: '#/components/schemas/OrigenSenace'
+        estadoFiltrado:
+          $ref: '#/components/schemas/EstadoFiltradoSenace'
+        cobertura:
+          $ref: '#/components/schemas/CoberturaSenace'
+        cuerpoCompleto:
+          type: boolean
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: Evidencia HTTP de completitud; se omite si se desconoce. Puede ser true aunque el contenido sea inválido.
+        motivo:
+          $ref: '#/components/schemas/MotivoSenace'
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+        conteos:
+          $ref: '#/components/schemas/ConteosSenace'
+        advertencias:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdvertenciaSenace'
+    ConteosSenace:
+      type: object
+      description: Conteos conocidos de registros. Ausencia significa desconocido o no aplicable; nunca se sustituye por cero.
+      properties:
+        recibidos:
+          type: integer
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: Filas recibidas cuando ese total se conoce.
+        aceptados:
+          type: integer
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: Filas estructuralmente aceptadas.
+        devueltos:
+          type: integer
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: Registros devueltos por la selección; no universo de proyectos.
+        aprobados:
+          type: integer
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: Registros Aprobado de la selección.
+        fechasNoEvaluables:
+          type: integer
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: Filas con fecha ausente o inválida en el conjunto recibido.
+        fechasNoEvaluablesEnActividad:
+          type: integer
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: Fechas no evaluables relevantes para la actividad seleccionada.
+    DatastreamSenaceResponse:
+      type: object
+      description: Envolvente compatible; data conserva array u objeto según recurso y es null cuando no se publican datos. Los errores solo incluyen metadatos seguros.
+      properties:
+        datastream:
+          type: string
+          description: Nombre canónico admitido o NO_RECONOCIDO; nunca se refleja entrada arbitraria.
+        origen:
+          $ref: '#/components/schemas/OrigenSenace'
+        data:
+          description: JSON del recurso. Array de campos oficiales para los dos recursos verificados, objeto opaco heredado para los otros seis, o null en error. No se promete esquema de los recursos no investigados.
+        consulta:
+          $ref: '#/components/schemas/ConsultaSenace'
+        recursoValidado:
+          type: boolean
+          description: Ruta y estructura observadas previamente en Fase 3A, no cobertura o disponibilidad actuales.
+        mensaje:
+          type: string
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          description: Mensaje fijo y seguro, opcional en errores.
+        datastreamsSoportados:
+          type: array
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          items:
+            type: string
+    OrigenSenace:
+      type: string
+      enum: [API_DIRECTA_SENACE, NO_DISPONIBLE]
+    EstadoConsultaSenace:
+      type: string
+      enum: [EXITO, VACIA, ERROR_EXTERNO, FORMATO_INVALIDO, PARCIAL]
+    EstadoFiltradoSenace:
+      type: string
+      enum: [APLICADO, SIN_COINCIDENCIAS, NO_EVALUABLE, NO_APLICABLE]
+    CoberturaSenace:
+      type: string
+      enum: [NO_VERIFICADA]
+    MotivoSenace:
+      type: string
+      enum: [RESPUESTA_OFICIAL_VACIA, SIN_COINCIDENCIAS, FECHAS_NO_EVALUABLES, LISTA_AUSENTE, FILA_NULA, ID_AUSENTE, ERROR_EXTERNO, FORMATO_INVALIDO, LIMITE_LECTURA, RESPUESTA_PARCIAL, CONFIGURACION_AUSENTE, CONFIGURACION_INVALIDA, CIRCUITO_ABIERTO, DESTINO_INVALIDO, RECURSO_INVALIDO, REDIRECCION_RECHAZADA, ERROR_HTTP, ERROR_TLS, TIMEOUT_CONEXION, TIMEOUT_INACTIVIDAD, PLAZO_TOTAL_AGOTADO, CODIFICACION_NO_ADMITIDA, INTERRUMPIDO]
+    AdvertenciaSenace:
+      type: string
+      enum: [FECHA_AUSENTE, FECHA_INVALIDA, COORDENADAS_INCOMPLETAS, COORDENADAS_FUERA_DE_RANGO]
     IndicadorBcrp:
       type: object
       description: Observación anual oficial BCRP o ausencia justificada. TODOS es contexto nacional, no un agregado de la cartera SENACE. Los campos económicos no disponibles se omiten.
@@ -156,9 +466,11 @@ components:
           description: URL de una sola serie con rango anual inicio=fin e idioma esp. Se omite si no puede construirse una consulta válida.
     EstadoServiciosResponse:
       type: object
-      description: Métricas de circuit breakers. respaldoLocal es NO_IMPLEMENTADO; no acredita disponibilidad de SQLite.
+      description: Métricas de llamadas lógicas y estado de circuitos, sin HTTP a proveedores. No acreditan disponibilidad externa. respaldoLocal es NO_IMPLEMENTADO; no se implementa un respaldo SQLite.
       properties:
         senace:
           type: object
+          description: servicio, estado, tasaFallosPorcentaje, llamadasFallidas, llamadasExitosas y respaldoLocal; alcanceMetricas LLAMADAS_LOGICAS y disponibilidadExterna NO_VERIFICADA.
         bcrp:
           type: object
+          description: Mismas métricas del circuito BCRP; no una prueba de disponibilidad del proveedor.

@@ -18,6 +18,11 @@
 		<spring-cloud.version>2023.0.1</spring-cloud.version> <!-- VERSIÓN CORREGIDA para compatibilidad -->
 	</properties>
 	<dependencies>
+		<!-- Transporte dedicado SENACE; version administrada por Spring Boot. -->
+		<dependency>
+			<groupId>org.apache.httpcomponents.client5</groupId>
+			<artifactId>httpclient5</artifactId>
+		</dependency>
 		<!-- Dependencias Originales -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
