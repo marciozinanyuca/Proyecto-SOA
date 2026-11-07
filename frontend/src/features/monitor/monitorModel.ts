@@ -1,9 +1,10 @@
-import { createApiClient } from '../../api/client.js';
+import { createMonitorSource, parseSourceConfig } from '../../api/source.js';
+import type { SourceConfig } from '../../api/source.js';
+import type { FetchLike } from '../../api/client.js';
 import type { HttpResult } from '../../api/client.js';
 import { adaptMonitor } from '../../api/adapters/monitor.js';
 import type { MonitorData } from '../../api/adapters/monitor.js';
 import type { Adapted, CircuitMetrics } from '../../api/types.js';
-import { createMockFetch } from '../../mocks/mockFetch.js';
 import type { Scenario } from '../../mocks/fixtures.js';
 
 export const monitorScenarios = [
@@ -16,11 +17,11 @@ export const monitorScenarios = [
   { value: 'monitorDemoInvalid', label: 'Formato JSON incompatible' },
 ] as const satisfies readonly { value: Scenario; label: string }[];
 export type MonitorScenario = typeof monitorScenarios[number]['value'];
-export interface MonitorSnapshot { scenario: MonitorScenario; http: HttpResult; result: Adapted<MonitorData>; completedAt: number }
-export async function loadMonitor(scenario: MonitorScenario, signal?: AbortSignal): Promise<MonitorSnapshot> {
-  const api = createApiClient({ mode: 'mock', fetcher: createMockFetch({ '/api/estado-servicios': scenario }, 300) });
+export interface MonitorSnapshot { scenario?: MonitorScenario; http: HttpResult; result: Adapted<MonitorData>; completedAt: number }
+export async function loadMonitor(scenario: MonitorScenario, signal?: AbortSignal, source: SourceConfig = parseSourceConfig({}), fetcher?: FetchLike): Promise<MonitorSnapshot> {
+  const api = createMonitorSource(source, scenario, fetcher);
   const http = await api.estadoServicios(signal);
-  return { scenario, http, result: adaptMonitor(http), completedAt: Date.now() };
+  return { ...(api.mode === 'mock' ? { scenario } : {}), http, result: adaptMonitor(http), completedAt: Date.now() };
 }
 export function circuitLabel(state: string | undefined) {
   switch (state) {
@@ -43,7 +44,7 @@ export function metricsFor(snapshot: MonitorSnapshot | undefined, service: 'sena
   return snapshot?.http.status === 200 && snapshot.result.state !== 'error' ? snapshot.result.data?.[service] : undefined;
 }
 export function monitorMessage(snapshot: MonitorSnapshot): string {
-  if (snapshot.result.state === 'error') return 'No se obtuvo un snapshot utilizable de la demostración. Las métricas desconocidas no se sustituyen por cero.';
+  if (snapshot.result.state === 'error') return `No se obtuvo un snapshot utilizable ${snapshot.http.mode === 'mock' ? 'de la demostración' : 'del backend HTTP'}. Las métricas desconocidas no se sustituyen por cero. No se activa una fuente alternativa.`;
   if (snapshot.result.state === 'degraded') return 'Snapshot incompleto: faltan servicios o metadatos. El adaptador lo clasifica como degradado, no como disponibilidad externa negativa.';
-  return 'Snapshot artificial recibido. Los estados y contadores describen circuitos y llamadas lógicas, no disponibilidad real de SENACE o BCRP.';
+  return `${snapshot.http.mode === 'mock' ? 'Snapshot artificial recibido.' : 'Snapshot recibido del backend por HTTP.'} Los estados y contadores describen circuitos y llamadas lógicas, no disponibilidad real de SENACE o BCRP.`;
 }

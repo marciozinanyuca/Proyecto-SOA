@@ -4,6 +4,89 @@ import { initialQuery, sectors, years, scenarios, loadDashboardDemo, knownProjec
 import { fixture } from '../../.api-test-build/mocks/fixtures.js';
 import { adaptDashboard } from '../../.api-test-build/api/adapters/dashboard.js';
 import { createLatestRequest } from '../../.api-test-build/api/requests.js';
+import { createDashboardSelectionStore } from '../../.api-test-build/api/dashboardSelectionStore.js';
+import { parseSourceConfig } from '../../.api-test-build/api/source.js';
+import { loadDashboardHttp, stateMessage } from '../../.api-test-build/features/dashboard/dashboardModel.js';
+
+const httpSource = () => parseSourceConfig({ VITE_API_MODE: 'http', VITE_API_BASE_URL: 'http://127.0.0.1:8081', VITE_HTTP_FEATURES: 'monitor,consultoras,dashboard,explorador' });
+const artificialHttpBody = state => structuredClone(fixture(`dashboardDemo:Hidrocarburos:2017:${state}`).body);
+
+test('7C3 una consulta HTTP alimenta lecturas compartidas sin otra solicitud ni fixtures geograficos', async () => {
+  const store = createDashboardSelectionStore(); let calls = 0;
+  assert.equal(store.peek(), undefined);
+  const body = artificialHttpBody('success');
+  const value = await loadDashboardHttp({ sector: 'Hidrocarburos', anio: 2017 }, httpSource(), undefined,
+    async () => { calls++; return new Response(JSON.stringify(body)); }, store);
+  assert.equal(value.http.mode, 'http'); assert.equal(value.scenario, undefined);
+  assert.equal(value.result.state, 'ready'); assert.ok(value.receivedAt);
+  const first = store.peek(); first.query.sector = 'EDICION LOCAL';
+  assert.equal(store.peek().query.sector, 'Hidrocarburos');
+  for (let n = 0; n < 5; n++) assert.equal(store.peek().result.data.proyectos.length, body.proyectos.length);
+  assert.equal(calls, 1);
+  assert.ok(knownProjects(value.result).every(row => row.latitud === undefined && row.longitud === undefined));
+});
+
+test('7C3 HTTP respeta actividad libre y ano fuera del catalogo de fixtures', async () => {
+  const query = { sector: 'Actividad artificial', anio: 2022 };
+  const value = await loadDashboardHttp(query, httpSource(), undefined, async url => {
+    const parsed = new URL(url); assert.equal(parsed.searchParams.get('sector'), query.sector);
+    assert.equal(parsed.searchParams.get('anio'), '2022');
+    return new Response(JSON.stringify(artificialHttpBody('empty')));
+  }, createDashboardSelectionStore());
+  assert.deepEqual(value.query, query);
+});
+
+test('7C3 SENACE ausente conserva BCRP y no genera proyectos ni conteos', async () => {
+  const value = await loadDashboardHttp(initialQuery, httpSource(), undefined,
+    async () => new Response(JSON.stringify(artificialHttpBody('degraded'))), createDashboardSelectionStore());
+  assert.equal(value.result.state, 'degraded'); assert.equal(knownProjects(value.result), undefined);
+  assert.equal(value.result.data.total, undefined); assert.equal(value.result.data.indicadorBcrp.origen, 'API_DIRECTA_BCRP');
+});
+
+test('7C3 SENACE disponible y BCRP ausente conserva proyectos con degradacion', async () => {
+  const body = artificialHttpBody('success'); delete body.indicadorBcrp; delete body.variacionSeleccionada;
+  body.fuentes.bcrp = 'NO_DISPONIBLE';
+  const value = await loadDashboardHttp(initialQuery, httpSource(), undefined,
+    async () => new Response(JSON.stringify(body)), createDashboardSelectionStore());
+  assert.equal(value.result.state, 'degraded'); assert.equal(knownProjects(value.result).length, body.total);
+  assert.equal(value.result.data.indicadorBcrp, undefined);
+});
+
+test('7C3 error nuevo sustituye exito anterior sin fallback y un solo intento', async () => {
+  const store = createDashboardSelectionStore(); let calls = 0;
+  const previous = store.begin(); store.publish(previous, { obsolete: true });
+  const value = await loadDashboardHttp(initialQuery, httpSource(), undefined, async () => { calls++; throw new Error('ARTIFICIAL'); }, store);
+  assert.equal(calls, 1); assert.equal(value.http.issue, 'RED'); assert.equal(value.http.mode, 'http');
+  assert.equal(value.result.state, 'error'); assert.equal(store.peek().obsolete, undefined);
+  assert.equal(store.peek().result.state, 'error'); assert.equal(knownProjects(value.result), undefined);
+  assert.ok(stateMessage(value.result, 'http').includes('No se activan mocks'));
+});
+
+test('7C3 cancelacion y respuesta antigua no sobrescriben la seleccion nueva', async () => {
+  const store = createDashboardSelectionStore(); const controller = new AbortController(); let release;
+  const old = loadDashboardHttp(initialQuery, httpSource(), controller.signal,
+    () => new Promise(resolve => { release = resolve; }), store);
+  const rejected = assert.rejects(old, { name: 'AbortError' });
+  controller.abort();
+  const current = await loadDashboardHttp({ sector: 'TODOS', anio: 2018 }, httpSource(), undefined,
+    async () => new Response(JSON.stringify(artificialHttpBody('empty'))), store);
+  release(new Response(JSON.stringify(artificialHttpBody('success')))); await rejected;
+  assert.deepEqual(store.peek().query, current.query);
+  const token = store.begin(); assert.equal(store.peek(), undefined);
+  assert.equal(store.publish(token - 1, current), false); assert.equal(store.peek(), undefined);
+});
+
+test('7C3 vacio oficial no equivale a fallo JSON y mantiene RUC textual/opcionales', async () => {
+  const empty = await loadDashboardHttp(initialQuery, httpSource(), undefined,
+    async () => new Response(JSON.stringify(artificialHttpBody('empty'))), createDashboardSelectionStore());
+  assert.equal(empty.result.state, 'empty'); assert.deepEqual(knownProjects(empty.result), []);
+  const bad = await loadDashboardHttp(initialQuery, httpSource(), undefined,
+    async () => new Response('<html>ARTIFICIAL</html>'), createDashboardSelectionStore());
+  assert.equal(bad.result.state, 'error'); assert.equal(knownProjects(bad.result), undefined);
+  const ok = await loadDashboardHttp(initialQuery, httpSource(), undefined,
+    async () => new Response(JSON.stringify(artificialHttpBody('success'))), createDashboardSelectionStore());
+  assert.ok(knownProjects(ok.result).every(row => row.ruc === undefined || typeof row.ruc === 'string'));
+});
 
 // Fixtures deliberadamente artificiales; ninguna prueba solicita datos oficiales.
 function adapted(sector = 'Hidrocarburos', anio = 2017, state = 'success') {

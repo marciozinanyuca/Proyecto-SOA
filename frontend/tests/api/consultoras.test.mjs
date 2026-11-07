@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { fixture } from '../../.api-test-build/mocks/fixtures.js';
 import { adaptConsultoras } from '../../.api-test-build/api/adapters/consultoras.js';
 import { createLatestRequest } from '../../.api-test-build/api/requests.js';
+import { parseSourceConfig } from '../../.api-test-build/api/source.js';
 import { consultantFields, consultantKpis, consultantMessage, displayField, emptyFilters, filterConsultants, filterOptions, loadConsultants, paginateConsultants, usableRows } from '../../.api-test-build/features/consultoras/consultorasModel.js';
 
 // Datos artificiales; ninguna observación de SENACE ni información personal real.
@@ -132,4 +133,68 @@ test('cancelación y resultado obsoleto no publican otra selección', async () =
   const result = await current; assert.equal(result.state, 'current'); assert.equal(result.value.result.state, 'empty');
   const cancelled = coordinator.run(signal => loadConsultants('consultorasDemoSuccess', signal));
   coordinator.cancel(); assert.equal((await cancelled).state, 'cancelled');
+});
+
+const httpConfig = parseSourceConfig({ VITE_API_MODE: 'http', VITE_API_BASE_URL: 'http://127.0.0.1:8081', VITE_HTTP_FEATURES: 'monitor,consultoras' });
+const officialHeaders = { 'Content-Type': 'application/json', 'X-Senace-Origen': 'API_DIRECTA_SENACE', 'X-Senace-Estado': 'EXITO', 'X-Senace-Cobertura': 'NO_VERIFICADA', 'X-Senace-Cuerpo-Completo': 'true' };
+const httpRow = { razonSocial: 'FILA ARTIFICIAL HTTP DE PRUEBA', actividad: 'ACTIVIDAD ARTIFICIAL', subsector: 'SUBSECTOR ARTIFICIAL', tipoSolicitud: 'TIPO ARTIFICIAL', resolucion: 'RESOLUCIÓN ARTIFICIAL', fechaRd: 'FECHA ORIGINAL SIN INTERPRETAR', inicioVigenciaRd: '', finVigenciaRd: 'TEXTO ORIGINAL' };
+
+test('HTTP devuelve exclusivamente filas inyectadas con duplicados, fechas y ocho campos', async () => {
+  let calls = 0;
+  const s = await loadConsultants('consultants503', undefined, httpConfig, async () => { calls++; return new Response(JSON.stringify([httpRow, httpRow, {}]), { status: 200, headers: officialHeaders }); });
+  assert.equal(s.http.mode, 'http'); assert.equal(s.scenario, undefined); assert.equal(s.result.state, 'ready');
+  assert.equal(calls, 1); assert.equal(usableRows(s).length, 3);
+  assert.deepEqual(usableRows(s)[0], usableRows(s)[1]); assert.equal(usableRows(s)[0].fechaRd, httpRow.fechaRd);
+  assert.equal(usableRows(s)[2].razonSocial, undefined);
+  assert.deepEqual(consultantKpis(s, select(s)), { received: 3, filtered: 3, withResolution: 2 });
+  assert.ok(!consultantMessage(s).includes('artificiales disponibles'));
+  for (const header of ['x-senace-origen', 'x-senace-estado', 'x-senace-cobertura', 'x-senace-cuerpo-completo']) assert.ok(s.http.headers[header]);
+});
+
+test('HTTP vacío acreditado conserva los cinco headers y cero conocido', async () => {
+  const s = await loadConsultants('consultorasDemoSuccess', undefined, httpConfig, async () => new Response('[]', { headers: { ...officialHeaders, 'X-Senace-Estado': 'VACIA', 'X-Senace-Motivo': 'RESPUESTA_OFICIAL_VACIA' } }));
+  assert.equal(s.result.state, 'empty'); assert.equal(s.http.headers['x-senace-motivo'], 'RESPUESTA_OFICIAL_VACIA');
+  assert.equal(consultantKpis(s, select(s)).received, 0); assert.ok(!consultantMessage(s).includes('simulada'));
+});
+
+for (const status of [502, 503]) test(`HTTP ${status}: no hay conteos inventados ni fallback o repetición`, async () => {
+  let calls = 0;
+  const s = await loadConsultants('consultorasDemoSuccess', undefined, httpConfig, async () => { calls++; return new Response('[]', { status, headers: { ...officialHeaders, 'X-Senace-Origen': 'NO_DISPONIBLE', 'X-Senace-Estado': status === 502 ? 'FORMATO_INVALIDO' : 'ERROR_EXTERNO', 'X-Senace-Motivo': status === 502 ? 'FORMATO_INVALIDO' : 'ERROR_HTTP' } }); });
+  assert.equal(s.http.status, status); assert.equal(s.http.mode, 'http'); assert.equal(s.result.state, 'error'); assert.equal(calls, 1);
+  assert.equal(usableRows(s), undefined); assert.equal(consultantKpis(s, select(s)).received, undefined);
+  assert.ok(!consultantMessage(s).includes('simulado'));
+});
+
+test('HTTP sin headers es degradado, array vacío sin ellos no es cero oficial', async () => {
+  for (const body of [[], [httpRow]]) {
+    const s = await loadConsultants('consultorasDemoSuccess', undefined, httpConfig, async () => new Response(JSON.stringify(body)));
+    assert.equal(s.result.state, 'degraded'); assert.equal(s.result.data.consulta.origen, undefined);
+    assert.equal(consultantKpis(s, select(s)).received, body.length ? 1 : undefined);
+  }
+});
+
+test('HTTP red, HTML y estructura incorrecta no se sustituyen por fixtures', async () => {
+  for (const fetcher of [async () => { throw new Error('DETALLE_NO_PUBLICABLE'); }, async () => new Response('<html>FIXTURE</html>'), async () => new Response('{}')]) {
+    const s = await loadConsultants('consultorasDemoSuccess', undefined, httpConfig, fetcher);
+    assert.equal(s.http.mode, 'http'); assert.equal(s.result.state, 'error'); assert.equal(usableRows(s), undefined);
+    assert.ok(!consultantMessage(s).includes('DETALLE_NO_PUBLICABLE'));
+  }
+});
+
+test('filtros y páginas tras carga HTTP no generan GET adicionales', async () => {
+  let calls = 0;
+  const s = await loadConsultants('consultorasDemoSuccess', undefined, httpConfig, async () => { calls++; return new Response(JSON.stringify([httpRow, httpRow]), { headers: officialHeaders }); });
+  for (let i = 0; i < 10; i++) { const filtered = select(s, { ...emptyFilters, actividad: httpRow.actividad }); paginateConsultants(filtered, i + 1); }
+  assert.equal(calls, 1);
+});
+
+test('HTTP cancelación y respuesta obsoleta no publican filas de una solicitud antigua', async () => {
+  const coordinator = createLatestRequest(); let release;
+  const old = coordinator.run(signal => loadConsultants('consultorasDemoSuccess', signal, httpConfig, () => new Promise(resolve => { release = resolve; })));
+  const current = coordinator.run(signal => loadConsultants('consultorasDemoSuccess', signal, httpConfig, async () => new Response('[]', { headers: { ...officialHeaders, 'X-Senace-Estado': 'VACIA' } })));
+  release(new Response(JSON.stringify([httpRow]), { headers: officialHeaders }));
+  assert.equal((await old).state, 'stale'); assert.equal((await current).value.result.state, 'empty');
+  const controller = new AbortController(); controller.abort(); let calls = 0;
+  const cancelled = await loadConsultants('consultorasDemoSuccess', controller.signal, httpConfig, async () => { calls++; return new Response('[]'); });
+  assert.equal(cancelled.http.issue, 'CANCELADA'); assert.equal(calls, 0);
 });

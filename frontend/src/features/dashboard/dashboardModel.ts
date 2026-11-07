@@ -1,20 +1,26 @@
 import { createApiClient } from '../../api/client.js';
 import { createDemoSelectionStore } from '../../api/demoSelectionStore.js';
-import type { HttpResult } from '../../api/client.js';
+import { createDashboardSelectionStore } from '../../api/dashboardSelectionStore.js';
+import { createDashboardSource } from '../../api/source.js';
+import type { SourceConfig } from '../../api/source.js';
+import type { FetchLike, HttpResult } from '../../api/client.js';
 import { adaptDashboard } from '../../api/adapters/dashboard.js';
 import type { Adapted, DashboardResponse, ProyectoSenacePublico } from '../../api/types.js';
 import { official } from '../../api/validation.js';
 import { createMockFetch } from '../../mocks/mockFetch.js';
-import type { DashboardDemoSector, DashboardDemoState, DashboardDemoYear, Scenario } from '../../mocks/fixtures.js';
+import type { DashboardDemoState, Scenario } from '../../mocks/fixtures.js';
 
-export interface DashboardQuery { sector: DashboardDemoSector; anio: DashboardDemoYear }
+export interface DashboardQuery { sector: string; anio: number }
 export interface DashboardSnapshot {
-  query: DashboardQuery; scenario: DashboardDemoState; http: HttpResult; result: Adapted<DashboardResponse>;
+  query: DashboardQuery; scenario?: DashboardDemoState; http: HttpResult; result: Adapted<DashboardResponse>; receivedAt?: string;
 }
 export const dashboardDemoStore = createDemoSelectionStore<DashboardSnapshot>();
+export const dashboardHttpStore = createDashboardSelectionStore<DashboardSnapshot>();
 export const initialQuery: Readonly<DashboardQuery> = { sector: 'Hidrocarburos', anio: 2017 };
 export const sectors = ['Hidrocarburos', 'Minería', 'TODOS'] as const;
 export const years = [2017, 2018] as const;
+/** Sugerencias de claves BCRP existentes; no catálogo oficial de actividades SENACE. */
+export const httpSectorSuggestions = ['TODOS', 'Agricultura', 'Pesca', 'Minería', 'Hidrocarburos', 'Electricidad', 'Transportes', 'Energia'] as const;
 export const scenarios: readonly { value: DashboardDemoState; label: string }[] = [
   { value: 'success', label: 'Respuesta satisfactoria' }, { value: 'empty', label: 'Respuesta oficial vacía (simulada)' },
   { value: 'noMatches', label: 'Sin coincidencias' }, { value: 'degraded', label: 'SENACE indisponible · BCRP disponible' },
@@ -23,13 +29,29 @@ export const scenarios: readonly { value: DashboardDemoState; label: string }[] 
 ];
 /** Reutiliza el transporte mock aprobado. Ningun camino construye mode:http. */
 export async function loadDashboardDemo(query: DashboardQuery, scenario: DashboardDemoState, signal?: AbortSignal): Promise<DashboardSnapshot> {
-  const key: Scenario = `dashboardDemo:${query.sector}:${query.anio}:${scenario}`;
+  if (!(sectors as readonly string[]).includes(query.sector) || !(years as readonly number[]).includes(query.anio)) throw new Error('SELECCION_MOCK_NO_SOPORTADA');
+  const key = `dashboardDemo:${query.sector}:${query.anio}:${scenario}` as Scenario;
   return dashboardDemoStore.get(key, async sharedSignal => {
     const api = createApiClient({ mode: 'mock', fetcher: createMockFetch({ '/api/dashboard': key }, 300) });
     const http = await api.dashboard(query.sector, query.anio, sharedSignal);
     if (http.issue === 'CANCELADA') throw new DOMException('Cancelada', 'AbortError');
     return { query: { ...query }, scenario, http, result: adaptDashboard(http) };
   }, signal);
+}
+
+/** Se invoca solo por una acción explícita. No reutiliza la caché de fixtures. */
+export async function loadDashboardHttp(query: DashboardQuery, config: SourceConfig, signal?: AbortSignal,
+    fetcher?: FetchLike, store = dashboardHttpStore): Promise<DashboardSnapshot> {
+  if (!config.valid || config.mode !== 'http') throw new Error('CONFIGURACION_HTTP_INVALIDA');
+  const api = createDashboardSource(config, 'dashboardSuccess', fetcher);
+  const ticket = store.begin();
+  const effective = { ...query };
+  const http = await api.dashboard(effective.sector, effective.anio, signal);
+  if (signal?.aborted || http.issue === 'CANCELADA') throw new DOMException('Cancelada', 'AbortError');
+  const snapshot: DashboardSnapshot = { query: effective, http, result: adaptDashboard(http), receivedAt: new Date().toISOString() };
+  // Incluso un error sustituye la selección previa: no conservar un éxito como si fuera reciente.
+  store.publish(ticket, snapshot);
+  return snapshot;
 }
 /** Desconocido no se convierte en lista vacia ni se agrega como cero. */
 export function knownProjects(result: Adapted<DashboardResponse>): ProyectoSenacePublico[] | undefined {
@@ -54,7 +76,14 @@ export function selectTable(rows: readonly ProyectoSenacePublico[] | undefined, 
     start: matches.length ? (current - 1) * pageSize + 1 : 0, end: Math.min(current * pageSize, matches.length) };
 }
 export const displayValue = (value: number | undefined): string => value === undefined ? 'No disponible' : value.toLocaleString('es-PE');
-export function stateMessage(result: Adapted<DashboardResponse>): string {
+export function stateMessage(result: Adapted<DashboardResponse>, mode: 'mock' | 'http' = 'mock'): string {
+  if (mode === 'http') {
+    if (result.state === 'error') return 'No se obtuvo una respuesta utilizable del backend. No se activan mocks.';
+    if (result.reason === 'RESPUESTA_OFICIAL_VACIA') return 'SENACE informó una respuesta oficial vacía.';
+    if (result.reason === 'SIN_COINCIDENCIAS') return 'No hay registros que coincidan con la actividad y el año de inicio consultados.';
+    if (result.state === 'degraded') return 'Respuesta degradada: revisa por separado SENACE, BCRP y la calidad temporal.';
+    return 'Respuesta del backend disponible. Describe la selección recibida, no cobertura oficial completa.';
+  }
   if (result.state === 'error') return 'No se pudo obtener un resultado utilizable de la demostración.';
   if (result.reason === 'RESPUESTA_OFICIAL_VACIA') return 'El escenario simula una respuesta SENACE oficial vacía.';
   if (result.reason === 'SIN_COINCIDENCIAS') return 'La consulta simulada no tiene registros que coincidan con los filtros.';

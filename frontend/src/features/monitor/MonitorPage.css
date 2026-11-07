@@ -11,7 +11,7 @@ caption.monitor-sr { display: block; }
 .monitor-actions { display: flex; flex-wrap: wrap; gap: .6rem; }
 .monitor-page button { min-height: 44px; padding: .65rem .9rem; background: white; color: #334155; border: 1px solid #cbd5e1; border-radius: .45rem; cursor: pointer; font: inherit; font-size: .8rem; }
 .monitor-page button:hover { background: #f0fdfa; }
-.monitor-page .monitor-primary { background: #059669; border-color: #059669; color: white; font-weight: 700; }
+.monitor-page .monitor-primary { background: #047857; border-color: #047857; color: white; font-weight: 700; }
 .monitor-page .monitor-primary:hover { background: #047857; }
 .monitor-page :is(button, select, summary, [tabindex]):focus-visible { outline: 3px solid #0891b2; outline-offset: 3px; }
 .monitor-tools { border-top: 1px solid #e2e8f0; padding-top: .5rem; margin-top: 1rem; }

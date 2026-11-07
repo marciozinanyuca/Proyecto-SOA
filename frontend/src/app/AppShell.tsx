@@ -5,15 +5,19 @@ import bcrpLogo from '../assets/bcrp-logo.png';
 import { NavigationIcon } from '../components/NavigationIcon';
 import { navigation } from './navigation';
 import type { NavigationItem } from './navigation';
+import { sourcePresentation } from '../api/source';
+import type { SourceConfig } from '../api/source';
 
 interface AppShellProps {
+  readonly source: SourceConfig;
   readonly page: NavigationItem | undefined;
   readonly menuOpen: boolean;
   readonly onToggleMenu: () => void;
   readonly children: ReactNode;
 }
 
-export function AppShell({ page, menuOpen, onToggleMenu, children }: AppShellProps) {
+export function AppShell({ source, page, menuOpen, onToggleMenu, children }: AppShellProps) {
+  const presentation = sourcePresentation(source);
   return (
     <div className="app-shell">
       <a className="skip-link" href="#contenido" onClick={(event) => {
@@ -46,22 +50,22 @@ export function AppShell({ page, menuOpen, onToggleMenu, children }: AppShellPro
             </ul>
           </nav>
           <div className="sidebar-note">
-            <span className="eyebrow">ESTRUCTURA INICIAL</span>
-            <p>Las vistas están en preparación.</p>
-            <span className="muted">Sin conexión a proveedores.</span>
+            <span className="eyebrow">{presentation.heading}</span>
+            <p>{presentation.description}</p>
+            <span className="muted">{presentation.note}</span>
           </div>
         </div>
       </aside>
       <div className="app-body">
         <header className="topbar">
           <p className="page-title">{page?.label ?? 'EcoInvest'}</p>
-          <div className="source-group" aria-label="Fuentes previstas; sin conexión en esta etapa">
+          <div className="source-group" aria-label={presentation.entitiesLabel}>
             <div className="source-label"><img className="source-logo source-logo--bcrp" src={bcrpLogo} alt="" /><div><strong>BCRP</strong><span>DATOS<br />MACROECONÓMICOS</span></div></div>
             <span className="source-divider" aria-hidden="true" />
             <div className="source-label source-label--senace"><img className="source-logo source-logo--senace" src={senaceLogo} alt="" /><div><strong>SENACE</strong><span>INFORMACIÓN<br />AMBIENTAL</span></div></div>
           </div>
           <div className="theme-label"><NavigationIcon kind="sun" /><span>Modo<br /><strong>Claro</strong></span></div>
-          <span className="stage-label">Frontend en preparación</span>
+          <span className="stage-label">{presentation.stage}</span>
         </header>
         {children}
       </div>

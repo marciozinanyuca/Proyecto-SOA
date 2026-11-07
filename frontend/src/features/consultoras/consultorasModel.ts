@@ -1,10 +1,11 @@
-import { createApiClient } from '../../api/client.js';
+import { createConsultorasSource, parseSourceConfig } from '../../api/source.js';
+import type { SourceConfig } from '../../api/source.js';
+import type { FetchLike } from '../../api/client.js';
 import type { HttpResult } from '../../api/client.js';
 import { adaptConsultoras } from '../../api/adapters/consultoras.js';
 import type { ConsultorasData } from '../../api/adapters/consultoras.js';
 import type { Adapted, ConsultoraSenacePublica } from '../../api/types.js';
 import { official } from '../../api/validation.js';
-import { createMockFetch } from '../../mocks/mockFetch.js';
 import type { Scenario } from '../../mocks/fixtures.js';
 
 export const consultantFields = [
@@ -23,13 +24,13 @@ export const consultantScenarios = [
   { value: 'consultorasDemoOptional', label: 'HTTP 200 · opcionales y vacíos' },
 ] as const satisfies readonly { value: Scenario; label: string }[];
 export type ConsultantScenario = typeof consultantScenarios[number]['value'];
-export interface ConsultantSnapshot { scenario: ConsultantScenario; http: HttpResult; result: Adapted<ConsultorasData> }
+export interface ConsultantSnapshot { scenario?: ConsultantScenario; http: HttpResult; result: Adapted<ConsultorasData> }
 export interface ConsultantFilters { search: string; actividad: string; subsector: string; tipoSolicitud: string }
 export const emptyFilters: Readonly<ConsultantFilters> = { search: '', actividad: '', subsector: '', tipoSolicitud: '' };
-export async function loadConsultants(scenario: ConsultantScenario, signal?: AbortSignal): Promise<ConsultantSnapshot> {
-  const api = createApiClient({ mode: 'mock', fetcher: createMockFetch({ '/api/consultoras': scenario }, 300) });
+export async function loadConsultants(scenario: ConsultantScenario, signal?: AbortSignal, source: SourceConfig = parseSourceConfig({}), fetcher?: FetchLike): Promise<ConsultantSnapshot> {
+  const api = createConsultorasSource(source, scenario, fetcher);
   const http = await api.consultoras(signal);
-  return { scenario, http, result: adaptConsultoras(http) };
+  return { ...(api.mode === 'mock' ? { scenario } : {}), http, result: adaptConsultoras(http) };
 }
 export function usableRows(snapshot: ConsultantSnapshot | undefined): ConsultoraSenacePublica[] | undefined {
   return snapshot?.http.status === 200 && snapshot.result.state !== 'error' ? snapshot.result.data?.rows : undefined;
@@ -66,10 +67,10 @@ export function paginateConsultants(entries: ReturnType<typeof filterConsultants
     start: entries.length ? (current - 1) * pageSize + 1 : 0, end: Math.min(current * pageSize, entries.length) };
 }
 export function consultantMessage(snapshot: ConsultantSnapshot): string {
-  if (snapshot.http.status === 502) return 'Formato externo inválido simulado (HTTP 502). El array de error no acredita cero consultoras.';
-  if (snapshot.http.status === 503) return 'SENACE no disponible en este escenario (HTTP 503). No hay un conteo oficial conocido.';
-  if (snapshot.result.state === 'error') return 'No se obtuvo una respuesta utilizable de la demostración. No se sustituyen errores por filas.';
+  if (snapshot.http.status === 502) return `Formato externo inválido${snapshot.http.mode === 'mock' ? ' simulado' : ''} (HTTP 502). El array de error no acredita cero consultoras.`;
+  if (snapshot.http.status === 503) return `SENACE no disponible${snapshot.http.mode === 'mock' ? ' en este escenario' : ' en esta consulta'} (HTTP 503). No hay un conteo oficial conocido.`;
+  if (snapshot.result.state === 'error') return 'No se obtuvo una respuesta utilizable. No se sustituyen errores por filas ni se activa una fuente alternativa.';
   if (snapshot.result.state === 'degraded') return 'Procedencia no confirmada: faltan metadatos SENACE. Las filas recibidas no se presentan como oficiales; un array vacío no certifica ausencia de consultoras.';
-  if (snapshot.result.state === 'empty') return 'Respuesta oficial vacía simulada (HTTP 200). No equivale a un error del proveedor.';
-  return 'Filas artificiales disponibles. Se conservan orden, duplicados y fechas originales, sin deducir vigencia.';
+  if (snapshot.result.state === 'empty') return `Respuesta oficial vacía${snapshot.http.mode === 'mock' ? ' simulada' : ''} (HTTP 200). No equivale a un error del proveedor.`;
+  return `${snapshot.http.mode === 'mock' ? 'Filas artificiales disponibles.' : 'Filas recibidas del backend con procedencia SENACE informada.'} Se conservan orden, duplicados y fechas originales, sin deducir vigencia.`;
 }

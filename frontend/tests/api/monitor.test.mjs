@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { fixture } from '../../.api-test-build/mocks/fixtures.js';
 import { adaptMonitor } from '../../.api-test-build/api/adapters/monitor.js';
 import { createLatestRequest } from '../../.api-test-build/api/requests.js';
+import { parseSourceConfig } from '../../.api-test-build/api/source.js';
 import { circuitLabel, countDisplay, loadMonitor, metricsFor, monitorMessage, rateDisplay } from '../../.api-test-build/features/monitor/monitorModel.js';
 
 // Telemetría artificial de prueba; nunca observaciones reales de proveedores.
@@ -118,4 +119,46 @@ test('cancelación y respuestas obsoletas no publican telemetría anterior', asy
   const result = await current; assert.equal(result.state, 'current'); assert.equal(result.value.scenario, 'monitorDemoPartial');
   const pending = coordinator.run(signal => loadMonitor('monitor', signal)); coordinator.cancel();
   assert.equal((await pending).state, 'cancelled');
+});
+
+const httpConfig = parseSourceConfig({ VITE_API_MODE: 'http', VITE_API_BASE_URL: 'http://127.0.0.1:8081', VITE_HTTP_FEATURES: 'monitor' });
+
+test('Monitor HTTP usa exclusivamente la respuesta inyectada, no el escenario artificial seleccionado', async () => {
+  const metrics = { servicio: 'SENACE', estado: 'CLOSED', llamadasFallidas: 2, llamadasExitosas: 37,
+    tasaFallosPorcentaje: 5.125, alcanceMetricas: 'LLAMADAS_LOGICAS', disponibilidadExterna: 'NO_VERIFICADA', respaldoLocal: 'NO_IMPLEMENTADO' };
+  let calls = 0;
+  const result = await loadMonitor('monitorDemoError', undefined, httpConfig, async () => {
+    calls++; return new Response(JSON.stringify({ senace: metrics, bcrp: { ...metrics, servicio: 'BCRP', llamadasExitosas: 83 } }), { status: 200 });
+  });
+  assert.equal(result.http.mode, 'http'); assert.equal(result.scenario, undefined); assert.equal(result.result.state, 'ready');
+  assert.equal(metricsFor(result, 'senace').llamadasExitosas, 37);
+  assert.equal(metricsFor(result, 'bcrp').llamadasExitosas, 83); assert.equal(calls, 1);
+  assert.match(monitorMessage(result), /backend por HTTP/); assert.ok(!monitorMessage(result).includes('artificial'));
+});
+
+test('Monitor HTTP con 503 conserva el fallo y no expone números de fixtures', async () => {
+  const result = await loadMonitor('monitor', undefined, httpConfig, async () => new Response('{}', { status: 503 }));
+  assert.equal(result.http.status, 503); assert.equal(result.result.state, 'error');
+  assert.equal(metricsFor(result, 'senace'), undefined); assert.equal(metricsFor(result, 'bcrp'), undefined);
+  assert.match(monitorMessage(result), /backend HTTP/);
+});
+
+test('Monitor HTTP clasifica JSON inválido y red sin activar modo demostración', async () => {
+  for (const fetcher of [async () => new Response('<html>FIXTURE</html>', { status: 200 }), async () => { throw new Error('DETALLE_NO_PUBLICABLE'); }]) {
+    const result = await loadMonitor('monitor', undefined, httpConfig, fetcher);
+    assert.equal(result.http.mode, 'http'); assert.equal(result.result.state, 'error'); assert.equal(metricsFor(result, 'senace'), undefined);
+    assert.ok(!monitorMessage(result).includes('DETALLE_NO_PUBLICABLE'));
+  }
+});
+
+test('Monitor HTTP acepta respuesta parcial y conserva datos desconocidos', async () => {
+  const result = await loadMonitor('monitor', undefined, httpConfig, async () => new Response(JSON.stringify({ senace: { estado: 'CLOSED' } })));
+  assert.equal(result.result.state, 'degraded'); assert.equal(metricsFor(result, 'senace').llamadasExitosas, undefined);
+  assert.equal(metricsFor(result, 'bcrp'), undefined);
+});
+
+test('Monitor rechaza configuración inválida antes de cualquier llamada', async () => {
+  let calls = 0;
+  await assert.rejects(loadMonitor('monitor', undefined, parseSourceConfig({ VITE_API_MODE: 'invalid' }), async () => { calls++; }), /CONFIGURACION_PUBLICA_INVALIDA/);
+  assert.equal(calls, 0);
 });

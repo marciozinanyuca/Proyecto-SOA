@@ -6,6 +6,8 @@ import { ConsultorasPage } from '../features/consultoras/ConsultorasPage';
 import { MonitorPage } from '../features/monitor/MonitorPage';
 import { AppShell } from './AppShell';
 import { navigation, resolveNavigation } from './navigation';
+import { publicConfig } from './config';
+import { featureAccess } from '../api/source';
 
 export function App() {
   const [hash, setHash] = useState(window.location.hash);
@@ -13,6 +15,7 @@ export function App() {
   const contentRef = useRef<HTMLElement>(null);
   const hasNavigated = useRef(false);
   const page = resolveNavigation(hash);
+  const access = page ? featureAccess(publicConfig, page.id) : undefined;
 
   useEffect(() => {
     if (!window.location.hash || window.location.hash === '#') {
@@ -34,9 +37,9 @@ export function App() {
   }, [page]);
 
   return (
-    <AppShell page={page} menuOpen={menuOpen} onToggleMenu={() => setMenuOpen((open) => !open)}>
+    <AppShell source={publicConfig} page={page} menuOpen={menuOpen} onToggleMenu={() => setMenuOpen((open) => !open)}>
       <main className="workspace" id="contenido" ref={contentRef} tabIndex={-1}>
-        {page ? (page.id === 'dashboard' ? <DashboardPage /> : page.id === 'explorador' ? <ExploradorPage /> : page.id === 'consultoras' ? <ConsultorasPage /> : page.id === 'monitor' ? <MonitorPage /> : <PreparationView page={page} />) : (
+        {page ? (!access?.allowed ? <section className="surface not-found" aria-labelledby="source-status-title"><span className="eyebrow">CONFIGURACIÓN DE FUENTE</span><h1 id="source-status-title">{publicConfig.valid ? 'Integración no habilitada' : 'Error de configuración'}</h1><p role="status">{access?.message}</p>{publicConfig.valid && <a className="text-link" href="#/monitor">Ir al Monitor de Salud SOA</a>}</section> : page.id === 'dashboard' ? <DashboardPage source={publicConfig} /> : page.id === 'explorador' ? <ExploradorPage source={publicConfig} /> : page.id === 'consultoras' ? <ConsultorasPage source={publicConfig} /> : page.id === 'monitor' ? <MonitorPage source={publicConfig} /> : <PreparationView page={page} />) : (
           <section className="surface not-found" aria-labelledby="not-found-title">
             <span className="eyebrow">NAVEGACIÓN</span>
             <h1 id="not-found-title">Vista no encontrada</h1>

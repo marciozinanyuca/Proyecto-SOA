@@ -10,7 +10,7 @@ caption.consultants-sr { display: block; }
 .consultants-page button { min-height: 44px; padding: .55rem .8rem; color: #334155; background: #fff; border: 1px solid #cbd5e1; border-radius: .45rem; font: inherit; font-size: .75rem; cursor: pointer; }
 .consultants-page button:hover:not(:disabled) { background: #f0fdfa; }
 .consultants-page button:disabled { opacity: .5; cursor: default; }
-.consultants-page .consultants-primary { background: #059669; border-color: #059669; color: #fff; font-weight: 700; }
+.consultants-page .consultants-primary { background: #047857; border-color: #047857; color: #fff; font-weight: 700; }
 .consultants-page .consultants-primary:hover { background: #047857; }
 .consultants-page :is(button, input, select, summary, [tabindex]):focus-visible { outline: 3px solid #0891b2; outline-offset: 3px; }
 .consultants-filter-footer { display: flex; gap: 1rem; justify-content: space-between; align-items: center; margin-top: 1rem; }
