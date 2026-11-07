@@ -17,6 +17,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.server.ResponseStatusException;
+import java.security.Principal;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 
 @RestController
 @RequestMapping("/api/admin/usuarios")
@@ -98,6 +101,43 @@ public class AdminUsuariosController {
             String username,
             String password,
             Usuario.Rol rol) {
+
+    }
+
+    @PatchMapping("/{id}/estado")
+    public UsuarioResumen cambiarEstado(
+            @PathVariable("id") Long id,
+            @RequestBody CambioEstado solicitud,
+            Principal principal) {
+
+        if (solicitud.activo() == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Indica si la cuenta debe quedar activa");
+        }
+
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                HttpStatus.NOT_FOUND, "Usuario no encontrado"));
+
+        if (!solicitud.activo()
+                && ("admin".equals(usuario.getUsername())
+                || principal.getName().equals(usuario.getUsername()))) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "Esta cuenta no se puede desactivar");
+        }
+
+        usuario.setActivo(solicitud.activo());
+        Usuario guardado = usuarioRepository.save(usuario);
+
+        return new UsuarioResumen(
+                guardado.getId(),
+                guardado.getNombre(),
+                guardado.getUsername(),
+                guardado.getRol(),
+                guardado.isActivo());
+    }
+
+    public record CambioEstado(Boolean activo) {
 
     }
 }
