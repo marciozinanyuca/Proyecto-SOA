@@ -1,6 +1,5 @@
 package com.ecoinvest.soa.config;
 
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
@@ -15,7 +14,7 @@ public class SeguridadConfig {
     @Bean
     SecurityFilterChain permisos(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests(reglas -> reglas
-                .requestMatchers("/api/estado-servicios", "/actuator/**")
+                .requestMatchers("/api/estado-servicios", "/actuator/**", "/api/admin/**")
                     .hasRole("ADMINISTRADOR")
                 .requestMatchers("/api/dashboard", "/api/consultoras",
                         "/api/senace/datastream")
@@ -30,6 +29,4 @@ public class SeguridadConfig {
     PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-
-    
 }
