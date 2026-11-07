@@ -1,0 +1,75 @@
+{
+  "sizes": [
+    {
+      "name": "escritorio",
+      "viewport": 1440,
+      "document": 1425,
+      "client": 1425,
+      "tableClient": 1087,
+      "tableScroll": 1087,
+      "moved": 0,
+      "controlMin": 44
+    },
+    {
+      "name": "tablet",
+      "viewport": 768,
+      "document": 753,
+      "client": 753,
+      "tableClient": 711,
+      "tableScroll": 726,
+      "moved": 15,
+      "controlMin": 44
+    },
+    {
+      "name": "movil",
+      "viewport": 375,
+      "document": 360,
+      "client": 360,
+      "tableClient": 326,
+      "tableScroll": 726,
+      "moved": 100,
+      "controlMin": 44
+    }
+  ],
+  "states": [
+    {
+      "state": "empty",
+      "width": 360,
+      "values": [
+        "0",
+        "0",
+        "1.25 %"
+      ]
+    },
+    {
+      "state": "degraded",
+      "width": 360,
+      "values": [
+        "No disponible",
+        "No disponible",
+        "1.25 %"
+      ]
+    },
+    {
+      "state": "error",
+      "width": 360,
+      "values": [
+        "No disponible",
+        "No disponible",
+        "No disponible"
+      ]
+    },
+    {
+      "state": "success",
+      "width": 360,
+      "values": [
+        "4",
+        "1",
+        "1.25 %"
+      ]
+    }
+  ],
+  "errors": [],
+  "external": [],
+  "backend": []
+}

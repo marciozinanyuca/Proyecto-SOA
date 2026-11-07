@@ -1,0 +1,94 @@
+{
+  "year": {
+    "values": [
+      "8",
+      "2",
+      "-0.75 %"
+    ],
+    "unit": "Variación porcentual interanual (%) · período 2018"
+  },
+  "overflow": [
+    {
+      "sel": ".workspace",
+      "width": 375,
+      "scroll": 744,
+      "minWidth": "0px",
+      "display": "block",
+      "columns": "none"
+    },
+    {
+      "sel": ".dashboard-page",
+      "width": 343,
+      "scroll": 728,
+      "minWidth": "0px",
+      "display": "grid",
+      "columns": "727.797px"
+    },
+    {
+      "sel": ".dash-data",
+      "width": 727.796875,
+      "scroll": 728,
+      "minWidth": "auto",
+      "display": "grid",
+      "columns": "727.797px"
+    },
+    {
+      "sel": ".dash-records",
+      "width": 727.796875,
+      "scroll": 726,
+      "minWidth": "auto",
+      "display": "block",
+      "columns": "none"
+    },
+    {
+      "sel": ".dash-table-scroll",
+      "width": 725.796875,
+      "scroll": 726,
+      "minWidth": "0px",
+      "display": "block",
+      "columns": "none"
+    },
+    {
+      "sel": ".dash-filters",
+      "width": 727.796875,
+      "scroll": 726,
+      "minWidth": "auto",
+      "display": "block",
+      "columns": "none"
+    }
+  ],
+  "mobileMenu": {
+    "expanded": "true",
+    "links": [
+      {
+        "text": "Saltar al contenido",
+        "href": "#contenido"
+      },
+      {
+        "text": "EcoInvest",
+        "href": "#/dashboard"
+      },
+      {
+        "text": "Dashboard Analítico",
+        "href": "#/dashboard"
+      },
+      {
+        "text": "Explorador Geográfico",
+        "href": "#/explorador"
+      },
+      {
+        "text": "Consultoras Ambientales",
+        "href": "#/consultoras"
+      },
+      {
+        "text": "Monitor de Salud SOA",
+        "href": "#/monitor"
+      }
+    ]
+  },
+  "other": "INFORMACIÓN AMBIENTAL\nConsultoras Ambientales\n\nConsulta de filas y campos originales del recurso ConsultorasAmbientales.\n\nEn preparación\nFASE 4B · LOTE 1\nUn espacio para información con contexto\n\nLa n",
+  "returned": {
+    "dashboard": true,
+    "focus": "contenido"
+  }
+}

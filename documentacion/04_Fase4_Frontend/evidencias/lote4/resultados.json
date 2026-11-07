@@ -1,0 +1,113 @@
+{
+  "viewports": [
+    {
+      "name": "escritorio",
+      "viewport": 1440,
+      "client": 1425,
+      "scroll": 1425,
+      "markers": 2,
+      "rows": 4,
+      "selected": "TITULAR ARTIFICIAL 1",
+      "controlMin": 44
+    },
+    {
+      "name": "tablet",
+      "viewport": 768,
+      "client": 753,
+      "scroll": 753,
+      "markers": 2,
+      "rows": 4,
+      "selected": "TITULAR ARTIFICIAL 1",
+      "controlMin": 44
+    },
+    {
+      "name": "movil",
+      "viewport": 375,
+      "client": 360,
+      "scroll": 360,
+      "markers": 2,
+      "rows": 4,
+      "selected": "TITULAR ARTIFICIAL 1",
+      "controlMin": 44
+    }
+  ],
+  "interactions": [
+    {
+      "name": "list-without-coordinates",
+      "rows": 4,
+      "markers": 2,
+      "selected": "TITULAR ARTIFICIAL 3",
+      "message": "Selección disponible. Todos los registros e indicadores mostrados son artificiales.",
+      "width": 360
+    },
+    {
+      "name": "state-filter",
+      "rows": 1,
+      "markers": 1,
+      "message": "Selección disponible. Todos los registros e indicadores mostrados son artificiales.",
+      "width": 360
+    },
+    {
+      "name": "search",
+      "rows": 0,
+      "markers": 0,
+      "message": "Selección disponible. Todos los registros e indicadores mostrados son artificiales.",
+      "map": "No hay registros en esta selección.",
+      "width": 360
+    },
+    {
+      "name": "TODOS-2018",
+      "rows": 8,
+      "markers": 4,
+      "message": "Selección disponible. Todos los registros e indicadores mostrados son artificiales.",
+      "width": 360
+    },
+    {
+      "name": "empty",
+      "rows": 0,
+      "markers": 0,
+      "message": "El escenario simula una respuesta SENACE oficial vacía.",
+      "map": "No hay registros en esta selección.",
+      "width": 360
+    },
+    {
+      "name": "degraded",
+      "rows": 0,
+      "markers": 0,
+      "message": "Información parcial: algunas fuentes o campos no están disponibles en este escenario.",
+      "map": "Coordenadas desconocidas: la consulta no ofrece una lista utilizable.",
+      "width": 360
+    },
+    {
+      "name": "error",
+      "rows": 0,
+      "markers": 0,
+      "message": "No se pudo obtener un resultado utilizable de la demostración.",
+      "map": "Coordenadas desconocidas: la consulta no ofrece una lista utilizable.",
+      "width": 360
+    },
+    {
+      "name": "success",
+      "rows": 8,
+      "markers": 0,
+      "message": "Selección disponible. Todos los registros e indicadores mostrados son artificiales.",
+      "map": "No hay coordenadas utilizables. Selecciona proyectos desde la lista o aplica el escenario de coordenadas artificiales.",
+      "width": 360
+    },
+    {
+      "name": "coordinates",
+      "rows": 8,
+      "markers": 4,
+      "message": "Selección disponible. Todos los registros e indicadores mostrados son artificiales.",
+      "width": 360
+    }
+  ],
+  "keyboard": {
+    "pressed": "true",
+    "detail": "TITULAR ARTIFICIAL 1"
+  },
+  "zoom": "26.920953361305557 52.71080932733334 5.839506174888891 7.725432098666664",
+  "errors": [],
+  "external": [],
+  "backend": []
+}

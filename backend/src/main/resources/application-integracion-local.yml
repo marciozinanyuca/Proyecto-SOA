@@ -1,0 +1,12 @@
+# Perfil opt-in: conserva las APIs sin crear infraestructura DataSource/JPA.
+# No importa archivos locales de credenciales ni modifica politicas de clientes.
+server:
+  address: 127.0.0.1
+  port: 8081
+
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration
