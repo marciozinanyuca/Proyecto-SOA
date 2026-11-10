@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "rootDir": "src",
+    "outDir": ".api-test-build",
+    "types": [],
+    "sourceMap": false
+  },
+  "include": ["src/api/**/*.ts", "src/mocks/**/*.ts", "src/features/dashboard/dashboardModel.ts", "src/features/explorador/exploradorModel.ts", "src/features/consultoras/consultorasModel.ts", "src/features/monitor/monitorModel.ts"],
+  "exclude": ["src/api/types.typecheck.ts"]
+}

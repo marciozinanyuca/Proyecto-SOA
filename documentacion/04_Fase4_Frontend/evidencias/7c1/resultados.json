@@ -1,0 +1,128 @@
+{
+  "date": "2026-11-07T19:16:19.400Z",
+  "blocked": [
+    {
+      "route": "dashboard",
+      "heading": "Integración no habilitada",
+      "message": "Integración HTTP no habilitada para esta pantalla. Solo Monitor está autorizado; no se ejecutan consultas ni se sustituye la fuente por mocks.",
+      "components": false
+    },
+    {
+      "route": "explorador",
+      "heading": "Integración no habilitada",
+      "message": "Integración HTTP no habilitada para esta pantalla. Solo Monitor está autorizado; no se ejecutan consultas ni se sustituye la fuente por mocks.",
+      "components": false
+    },
+    {
+      "route": "consultoras",
+      "heading": "Integración no habilitada",
+      "message": "Integración HTTP no habilitada para esta pantalla. Solo Monitor está autorizado; no se ejecutan consultas ni se sustituye la fuente por mocks.",
+      "components": false
+    }
+  ],
+  "screens": [
+    {
+      "name": "escritorio",
+      "viewport": 1440,
+      "client": 1425,
+      "scroll": 1425
+    },
+    {
+      "name": "tablet",
+      "viewport": 768,
+      "client": 753,
+      "scroll": 753
+    },
+    {
+      "name": "movil",
+      "viewport": 375,
+      "client": 360,
+      "scroll": 360
+    }
+  ],
+  "before": {
+    "banner": "MODO HTTP — BACKEND LOCALSolo métricas internas; sin health checks externos",
+    "feedback": "Sin snapshot. Pulsa Consultar Monitor por HTTP para realizar una única consulta manual.",
+    "states": [
+      "No disponible",
+      "No disponible"
+    ],
+    "scenarios": 0
+  },
+  "backendBefore": 0,
+  "after": {
+    "banner": "MODO HTTP — BACKEND LOCALSolo métricas internas; sin health checks externos",
+    "feedback": "Snapshot recibido del backend por HTTP. Los estados y contadores describen circuitos y llamadas lógicas, no disponibilidad real de SENACE o BCRP.",
+    "states": [
+      "CLOSED",
+      "CLOSED"
+    ],
+    "metrics": [
+      "0",
+      "0",
+      "No calculada",
+      "0",
+      "0",
+      "No calculada"
+    ],
+    "scope": [
+      "SENACE",
+      "LLAMADAS_LOGICAS",
+      "NO_VERIFICADA",
+      "NO_IMPLEMENTADO",
+      "BCRP",
+      "LLAMADAS_LOGICAS",
+      "NO_VERIFICADA",
+      "NO_IMPLEMENTADO"
+    ],
+    "http": "HTTP backend: 200",
+    "mode": "HTTP · backend local"
+  },
+  "response": {
+    "id": "29064.50",
+    "status": 200,
+    "url": "http://127.0.0.1:8081/api/estado-servicios",
+    "headers": {
+      "Access-Control-Allow-Origin": "*",
+      "Content-Type": "application/json",
+      "Vary": "Origin, Access-Control-Request-Method, Access-Control-Request-Headers"
+    }
+  },
+  "responseData": {
+    "senace": {
+      "servicio": "SENACE",
+      "estado": "CLOSED",
+      "tasaFallosPorcentaje": -1,
+      "llamadasFallidas": 0,
+      "llamadasExitosas": 0,
+      "respaldoLocal": "NO_IMPLEMENTADO",
+      "alcanceMetricas": "LLAMADAS_LOGICAS",
+      "disponibilidadExterna": "NO_VERIFICADA"
+    },
+    "bcrp": {
+      "servicio": "BCRP",
+      "estado": "CLOSED",
+      "tasaFallosPorcentaje": -1,
+      "llamadasFallidas": 0,
+      "llamadasExitosas": 0,
+      "respaldoLocal": "NO_IMPLEMENTADO",
+      "alcanceMetricas": "LLAMADAS_LOGICAS",
+      "disponibilidadExterna": "NO_VERIFICADA"
+    }
+  },
+  "comparison": {
+    "statesMatch": true,
+    "countsAndRatesMatch": true
+  },
+  "backendRequests": [
+    {
+      "id": "29064.50",
+      "url": "http://127.0.0.1:8081/api/estado-servicios",
+      "method": "GET",
+      "origin": null
+    }
+  ],
+  "external": [],
+  "errors": [],
+  "onlyOneGet": true
+}

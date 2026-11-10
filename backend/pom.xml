@@ -18,6 +18,11 @@
         <spring-cloud.version>2023.0.1</spring-cloud.version> <!-- VERSIÓN CORREGIDA para compatibilidad -->
     </properties>
     <dependencies>
+        <!-- Transporte dedicado SENACE; version administrada por Spring Boot. -->
+        <dependency>
+            <groupId>org.apache.httpcomponents.client5</groupId>
+            <artifactId>httpclient5</artifactId>
+        </dependency>
         <!-- Dependencias Originales -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -80,11 +85,12 @@
             <scope>test</scope>
         </dependency>
                 
+                
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
-        
+
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>

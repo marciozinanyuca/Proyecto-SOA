@@ -1,0 +1,31 @@
+:root {
+  color-scheme: light;
+  --color-canvas: #f8fafc;
+  --color-surface: #ffffff;
+  --color-text: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted: #64748b;
+  --color-border: #e2e8f0;
+  --color-primary: #059669;
+  --color-primary-strong: #047857;
+  --color-primary-accent: #10b981;
+  --color-primary-soft: #ecfdf5;
+  --color-primary-border: #a7f3d0;
+  --color-secondary: #0891b2;
+  --color-secondary-accent: #06b6d4;
+  --color-secondary-soft: #ecfeff;
+  --font-body: 'Manrope', 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Space Grotesk', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', Consolas, monospace;
+  --radius-control: 0.5rem;
+  --radius-panel: 0.875rem;
+  --radius-pill: 999px;
+  --shadow-panel: 0 1px 3px rgb(15 23 42 / 5%);
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --sidebar-width: 17rem;
+}

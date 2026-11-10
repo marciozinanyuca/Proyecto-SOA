@@ -1,0 +1,230 @@
+{
+  "viewports": [
+    {
+      "name": "escritorio",
+      "viewport": 1440,
+      "client": 1425,
+      "scroll": 1425,
+      "rows": 10,
+      "kpis": [
+        "14",
+        "14",
+        "9"
+      ],
+      "tableClient": 1087,
+      "tableScroll": 1296,
+      "tableMoved": 100,
+      "controlMin": 44
+    },
+    {
+      "name": "tablet",
+      "viewport": 768,
+      "client": 753,
+      "scroll": 753,
+      "rows": 10,
+      "kpis": [
+        "14",
+        "14",
+        "9"
+      ],
+      "tableClient": 711,
+      "tableScroll": 1296,
+      "tableMoved": 100,
+      "controlMin": 44
+    },
+    {
+      "name": "movil",
+      "viewport": 375,
+      "client": 360,
+      "scroll": 360,
+      "rows": 10,
+      "kpis": [
+        "14",
+        "14",
+        "9"
+      ],
+      "tableClient": 326,
+      "tableScroll": 1296,
+      "tableMoved": 100,
+      "controlMin": 44
+    }
+  ],
+  "interactions": [
+    {
+      "name": "detail",
+      "kpis": [
+        "14",
+        "14",
+        "9"
+      ],
+      "rows": 10,
+      "feedback": "Filas artificiales disponibles. Se conservan orden, duplicados y fechas originales, sin deducir vigencia.",
+      "pagination": "Mostrando 1–10 de 14 filas filtradas · máximo 10 filas por páginaAnteriorPágina 1 de 2Siguiente",
+      "width": 360,
+      "detail": "Fila 1 de esta respuesta; no es un identificador oficial de empresa.\n\nRazón social\nCONSULTORA ARTIFICIAL 1\nActividad\nMinería\nSubsector\nSUBSECTOR ARTIFICIAL A\nTipo de solicitud\nSOLICITUD ARTIFICIAL A\nResolución\nNo disponible\nFecha RD original\n01/03/2017\nInicio de vigencia RD original\nTEXTO ORIGINAL DE INICIO\nFin de vigencia RD original\nTEXTO ORIGINAL DE FIN\n\nLas fechas son textos originales. No se calcula estado activo, vencido, habilitación ni vigencia administrativa.",
+      "focus": "consultants-detail-title"
+    },
+    {
+      "name": "close-detail",
+      "kpis": [
+        "14",
+        "14",
+        "9"
+      ],
+      "rows": 10,
+      "feedback": "Filas artificiales disponibles. Se conservan orden, duplicados y fechas originales, sin deducir vigencia.",
+      "pagination": "Mostrando 1–10 de 14 filas filtradas · máximo 10 filas por páginaAnteriorPágina 1 de 2Siguiente",
+      "width": 360,
+      "focus": ""
+    },
+    {
+      "name": "activity-filter",
+      "kpis": [
+        "14",
+        "7",
+        "3"
+      ],
+      "rows": 7,
+      "feedback": "Filas artificiales disponibles. Se conservan orden, duplicados y fechas originales, sin deducir vigencia.",
+      "pagination": "Mostrando 1–7 de 7 filas filtradas · máximo 10 filas por páginaAnteriorPágina 1 de 1Siguiente",
+      "width": 360,
+      "focus": ""
+    },
+    {
+      "name": "search-empty",
+      "kpis": [
+        "14",
+        "0",
+        "0"
+      ],
+      "rows": 0,
+      "feedback": "Filas artificiales disponibles. Se conservan orden, duplicados y fechas originales, sin deducir vigencia.",
+      "pagination": "Mostrando 0–0 de 0 filas filtradas · máximo 10 filas por páginaAnteriorPágina 0 de 0Siguiente",
+      "width": 360,
+      "focus": ""
+    },
+    {
+      "name": "pagination",
+      "kpis": [
+        "14",
+        "14",
+        "9"
+      ],
+      "rows": 4,
+      "feedback": "Filas artificiales disponibles. Se conservan orden, duplicados y fechas originales, sin deducir vigencia.",
+      "pagination": "Mostrando 11–14 de 14 filas filtradas · máximo 10 filas por páginaAnteriorPágina 2 de 2Siguiente",
+      "width": 360,
+      "focus": ""
+    },
+    {
+      "name": "consultantsEmpty",
+      "kpis": [
+        "0",
+        "0",
+        "0"
+      ],
+      "rows": 0,
+      "feedback": "Respuesta oficial vacía simulada (HTTP 200). No equivale a un error del proveedor.",
+      "pagination": "Mostrando 0–0 de 0 filas filtradas · máximo 10 filas por páginaAnteriorPágina 0 de 0Siguiente",
+      "width": 360,
+      "focus": ""
+    },
+    {
+      "name": "consultants502",
+      "kpis": [
+        "No disponible",
+        "No disponible",
+        "No disponible"
+      ],
+      "rows": 0,
+      "feedback": "Formato externo inválido simulado (HTTP 502). El array de error no acredita cero consultoras.",
+      "width": 360,
+      "focus": ""
+    },
+    {
+      "name": "consultants503",
+      "kpis": [
+        "No disponible",
+        "No disponible",
+        "No disponible"
+      ],
+      "rows": 0,
+      "feedback": "SENACE no disponible en este escenario (HTTP 503). No hay un conteo oficial conocido.",
+      "width": 360,
+      "focus": ""
+    },
+    {
+      "name": "consultorasDemoNoHeaders",
+      "kpis": [
+        "14",
+        "14",
+        "9"
+      ],
+      "rows": 10,
+      "feedback": "Procedencia no confirmada: faltan metadatos SENACE. Las filas recibidas no se presentan como oficiales; un array vacío no certifica ausencia de consultoras.",
+      "pagination": "Mostrando 1–10 de 14 filas filtradas · máximo 10 filas por páginaAnteriorPágina 1 de 2Siguiente",
+      "width": 360,
+      "focus": ""
+    },
+    {
+      "name": "consultorasDemoEmptyNoHeaders",
+      "kpis": [
+        "No disponible",
+        "No disponible",
+        "No disponible"
+      ],
+      "rows": 0,
+      "feedback": "Procedencia no confirmada: faltan metadatos SENACE. Las filas recibidas no se presentan como oficiales; un array vacío no certifica ausencia de consultoras.",
+      "pagination": "Mostrando 0–0 de 0 filas filtradas · máximo 10 filas por páginaAnteriorPágina 0 de 0Siguiente",
+      "width": 360,
+      "focus": ""
+    },
+    {
+      "name": "consultorasDemoInvalid",
+      "kpis": [
+        "No disponible",
+        "No disponible",
+        "No disponible"
+      ],
+      "rows": 0,
+      "feedback": "No se obtuvo una respuesta utilizable de la demostración. No se sustituyen errores por filas.",
+      "width": 360,
+      "focus": ""
+    },
+    {
+      "name": "consultorasDemoOptional",
+      "kpis": [
+        "2",
+        "2",
+        "0"
+      ],
+      "rows": 2,
+      "feedback": "Filas artificiales disponibles. Se conservan orden, duplicados y fechas originales, sin deducir vigencia.",
+      "pagination": "Mostrando 1–2 de 2 filas filtradas · máximo 10 filas por páginaAnteriorPágina 1 de 1Siguiente",
+      "width": 360,
+      "focus": ""
+    },
+    {
+      "name": "consultorasDemoSuccess",
+      "kpis": [
+        "14",
+        "14",
+        "9"
+      ],
+      "rows": 10,
+      "feedback": "Filas artificiales disponibles. Se conservan orden, duplicados y fechas originales, sin deducir vigencia.",
+      "pagination": "Mostrando 1–10 de 14 filas filtradas · máximo 10 filas por páginaAnteriorPágina 1 de 2Siguiente",
+      "width": 360,
+      "focus": ""
+    }
+  ],
+  "navigation": {
+    "dash": true,
+    "explorer": true,
+    "consultoras": true,
+    "focus": "contenido"
+  },
+  "errors": [],
+  "external": [],
+  "backend": []
+}

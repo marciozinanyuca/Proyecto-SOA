@@ -1,0 +1,232 @@
+{
+  "resolutions": [
+    {
+      "name": "escritorio",
+      "viewport": 1440,
+      "documentWidth": 1425,
+      "clientWidth": 1425,
+      "dashboard": 1089,
+      "tableClient": 1087,
+      "tableScroll": 1087,
+      "tableMoved": 0,
+      "controls": [
+        {
+          "tag": "SELECT",
+          "height": 44
+        },
+        {
+          "tag": "SELECT",
+          "height": 44
+        },
+        {
+          "tag": "BUTTON",
+          "height": 44
+        },
+        {
+          "tag": "SUMMARY",
+          "height": 44
+        },
+        {
+          "tag": "SELECT",
+          "height": 44
+        },
+        {
+          "tag": "INPUT",
+          "height": 44
+        },
+        {
+          "tag": "BUTTON",
+          "height": 44
+        },
+        {
+          "tag": "BUTTON",
+          "height": 44
+        }
+      ],
+      "bodyOverflow": "visible"
+    },
+    {
+      "name": "tablet",
+      "viewport": 768,
+      "documentWidth": 753,
+      "clientWidth": 753,
+      "dashboard": 713,
+      "tableClient": 711,
+      "tableScroll": 726,
+      "tableMoved": 15,
+      "controls": [
+        {
+          "tag": "SELECT",
+          "height": 44
+        },
+        {
+          "tag": "SELECT",
+          "height": 44
+        },
+        {
+          "tag": "BUTTON",
+          "height": 44
+        },
+        {
+          "tag": "SUMMARY",
+          "height": 44
+        },
+        {
+          "tag": "SELECT",
+          "height": 44
+        },
+        {
+          "tag": "INPUT",
+          "height": 44
+        },
+        {
+          "tag": "BUTTON",
+          "height": 44
+        },
+        {
+          "tag": "BUTTON",
+          "height": 44
+        }
+      ],
+      "bodyOverflow": "visible"
+    },
+    {
+      "name": "movil",
+      "viewport": 375,
+      "documentWidth": 480,
+      "clientWidth": 360,
+      "dashboard": 328,
+      "tableClient": 326,
+      "tableScroll": 726,
+      "tableMoved": 100,
+      "controls": [
+        {
+          "tag": "SELECT",
+          "height": 44
+        },
+        {
+          "tag": "SELECT",
+          "height": 44
+        },
+        {
+          "tag": "BUTTON",
+          "height": 44
+        },
+        {
+          "tag": "SUMMARY",
+          "height": 44
+        },
+        {
+          "tag": "SELECT",
+          "height": 44
+        },
+        {
+          "tag": "INPUT",
+          "height": 44
+        },
+        {
+          "tag": "BUTTON",
+          "height": 44
+        },
+        {
+          "tag": "BUTTON",
+          "height": 44
+        }
+      ],
+      "bodyOverflow": "visible"
+    }
+  ],
+  "interactions": [
+    {
+      "name": "TODOS/2018",
+      "values": [
+        "8",
+        "2",
+        "-0.75 %"
+      ],
+      "feedback": "Selección disponible. Todos los registros e indicadores mostrados son artificiales.",
+      "rows": 3,
+      "pagination": "Mostrando 1–3 de 8 filasAnteriorPágina 1 de 3Siguiente",
+      "width": 480
+    },
+    {
+      "name": "pagination",
+      "values": [
+        "8",
+        "2",
+        "-0.75 %"
+      ],
+      "feedback": "Selección disponible. Todos los registros e indicadores mostrados son artificiales.",
+      "rows": 3,
+      "pagination": "Mostrando 4–6 de 8 filasAnteriorPágina 2 de 3Siguiente",
+      "width": 480
+    },
+    {
+      "name": "search",
+      "values": [
+        "8",
+        "2",
+        "-0.75 %"
+      ],
+      "feedback": "Selección disponible. Todos los registros e indicadores mostrados son artificiales.",
+      "rows": 0,
+      "pagination": "Mostrando 0–0 de 0 filas de la búsqueda localAnteriorPágina 0 de 0Siguiente",
+      "width": 480
+    },
+    {
+      "name": "empty",
+      "values": [
+        "0",
+        "0",
+        "-0.75 %"
+      ],
+      "feedback": "El escenario simula una respuesta SENACE oficial vacía.",
+      "rows": 0,
+      "pagination": "Mostrando 0–0 de 0 filasAnteriorPágina 0 de 0Siguiente",
+      "width": 360
+    },
+    {
+      "name": "degraded",
+      "values": [
+        "No disponible",
+        "No disponible",
+        "-0.75 %"
+      ],
+      "feedback": "Información parcial: algunas fuentes o campos no están disponibles en este escenario.",
+      "rows": 0,
+      "width": 360
+    },
+    {
+      "name": "error",
+      "values": [
+        "No disponible",
+        "No disponible",
+        "No disponible"
+      ],
+      "feedback": "No se pudo obtener un resultado utilizable de la demostración.",
+      "rows": 0,
+      "width": 360
+    },
+    {
+      "name": "success",
+      "values": [
+        "8",
+        "2",
+        "-0.75 %"
+      ],
+      "feedback": "Selección disponible. Todos los registros e indicadores mostrados son artificiales.",
+      "rows": 3,
+      "pagination": "Mostrando 1–3 de 8 filasAnteriorPágina 1 de 3Siguiente",
+      "width": 480
+    }
+  ],
+  "navigation": {
+    "dashboard": true,
+    "focus": "contenido"
+  },
+  "errors": [],
+  "network": {
+    "external": [],
+    "backend": []
+  }
+}

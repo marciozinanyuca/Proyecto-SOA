@@ -1,0 +1,241 @@
+{
+  "viewports": [
+    {
+      "name": "escritorio",
+      "viewport": 1440,
+      "client": 1425,
+      "scroll": 1425,
+      "tableClient": 1087,
+      "tableScroll": 1087,
+      "moved": 0,
+      "controlMin": 44,
+      "states": [
+        "CLOSED",
+        "OPEN"
+      ],
+      "metrics": [
+        "0",
+        "0",
+        "No calculada",
+        "5",
+        "0",
+        "100 %"
+      ],
+      "feedback": "Snapshot artificial recibido. Los estados y contadores describen circuitos y llamadas lógicas, no disponibilidad real de SENACE o BCRP.",
+      "time": "Última consulta completada · hora local del cliente: 7/11/2026, 10:40:42 a. m.",
+      "width": 1425
+    },
+    {
+      "name": "tablet",
+      "viewport": 768,
+      "client": 753,
+      "scroll": 753,
+      "tableClient": 711,
+      "tableScroll": 768,
+      "moved": 57,
+      "controlMin": 44,
+      "states": [
+        "CLOSED",
+        "OPEN"
+      ],
+      "metrics": [
+        "0",
+        "0",
+        "No calculada",
+        "5",
+        "0",
+        "100 %"
+      ],
+      "feedback": "Snapshot artificial recibido. Los estados y contadores describen circuitos y llamadas lógicas, no disponibilidad real de SENACE o BCRP.",
+      "time": "Última consulta completada · hora local del cliente: 7/11/2026, 10:40:42 a. m.",
+      "width": 753
+    },
+    {
+      "name": "movil",
+      "viewport": 375,
+      "client": 360,
+      "scroll": 360,
+      "tableClient": 326,
+      "tableScroll": 768,
+      "moved": 100,
+      "controlMin": 44,
+      "states": [
+        "CLOSED",
+        "OPEN"
+      ],
+      "metrics": [
+        "0",
+        "0",
+        "No calculada",
+        "5",
+        "0",
+        "100 %"
+      ],
+      "feedback": "Snapshot artificial recibido. Los estados y contadores describen circuitos y llamadas lógicas, no disponibilidad real de SENACE o BCRP.",
+      "time": "Última consulta completada · hora local del cliente: 7/11/2026, 10:40:42 a. m.",
+      "width": 360
+    }
+  ],
+  "interactions": [
+    {
+      "scenario": "monitorHalfOpen",
+      "states": [
+        "HALF_OPEN",
+        "DISABLED"
+      ],
+      "metrics": [
+        "0",
+        "0",
+        "No calculada",
+        "0",
+        "0",
+        "No calculada"
+      ],
+      "feedback": "Snapshot artificial recibido. Los estados y contadores describen circuitos y llamadas lógicas, no disponibilidad real de SENACE o BCRP.",
+      "time": "Última consulta completada · hora local del cliente: 7/11/2026, 10:40:46 a. m.",
+      "width": 360
+    },
+    {
+      "scenario": "monitorDemoPartial",
+      "states": [
+        "CLOSED",
+        "No disponible"
+      ],
+      "metrics": [
+        "No disponible",
+        "0",
+        "No disponible",
+        "No disponible",
+        "No disponible",
+        "No disponible"
+      ],
+      "feedback": "Snapshot incompleto: faltan servicios o metadatos. El adaptador lo clasifica como degradado, no como disponibilidad externa negativa.",
+      "time": "Última consulta completada · hora local del cliente: 7/11/2026, 10:40:47 a. m.",
+      "width": 360
+    },
+    {
+      "scenario": "monitorDemoEmpty",
+      "states": [
+        "No disponible",
+        "No disponible"
+      ],
+      "metrics": [
+        "No disponible",
+        "No disponible",
+        "No disponible",
+        "No disponible",
+        "No disponible",
+        "No disponible"
+      ],
+      "feedback": "Snapshot incompleto: faltan servicios o metadatos. El adaptador lo clasifica como degradado, no como disponibilidad externa negativa.",
+      "time": "Última consulta completada · hora local del cliente: 7/11/2026, 10:40:48 a. m.",
+      "width": 360
+    },
+    {
+      "scenario": "monitorDemoOptional",
+      "states": [
+        "CLOSED",
+        "OPEN"
+      ],
+      "metrics": [
+        "No disponible",
+        "No disponible",
+        "No disponible",
+        "No disponible",
+        "No disponible",
+        "No disponible"
+      ],
+      "feedback": "Snapshot artificial recibido. Los estados y contadores describen circuitos y llamadas lógicas, no disponibilidad real de SENACE o BCRP.",
+      "time": "Última consulta completada · hora local del cliente: 7/11/2026, 10:40:48 a. m.",
+      "width": 360
+    },
+    {
+      "scenario": "monitorDemoError",
+      "states": [
+        "No disponible",
+        "No disponible"
+      ],
+      "metrics": [
+        "No disponible",
+        "No disponible",
+        "No disponible",
+        "No disponible",
+        "No disponible",
+        "No disponible"
+      ],
+      "feedback": "No se obtuvo un snapshot utilizable de la demostración. Las métricas desconocidas no se sustituyen por cero.",
+      "time": "Última consulta completada · hora local del cliente: 7/11/2026, 10:40:49 a. m.",
+      "width": 360
+    },
+    {
+      "scenario": "monitorDemoInvalid",
+      "states": [
+        "No disponible",
+        "No disponible"
+      ],
+      "metrics": [
+        "No disponible",
+        "No disponible",
+        "No disponible",
+        "No disponible",
+        "No disponible",
+        "No disponible"
+      ],
+      "feedback": "No se obtuvo un snapshot utilizable de la demostración. Las métricas desconocidas no se sustituyen por cero.",
+      "time": "Última consulta completada · hora local del cliente: 7/11/2026, 10:40:50 a. m.",
+      "width": 360
+    },
+    {
+      "scenario": "monitor",
+      "states": [
+        "CLOSED",
+        "OPEN"
+      ],
+      "metrics": [
+        "0",
+        "0",
+        "No calculada",
+        "5",
+        "0",
+        "100 %"
+      ],
+      "feedback": "Snapshot artificial recibido. Los estados y contadores describen circuitos y llamadas lógicas, no disponibilidad real de SENACE o BCRP.",
+      "time": "Última consulta completada · hora local del cliente: 7/11/2026, 10:40:51 a. m.",
+      "width": 360
+    }
+  ],
+  "refresh": {
+    "before": "Última consulta completada · hora local del cliente: 7/11/2026, 10:40:42 a. m.",
+    "after": "Última consulta completada · hora local del cliente: 7/11/2026, 10:40:45 a. m."
+  },
+  "cancel": {
+    "states": [
+      "CLOSED",
+      "OPEN"
+    ],
+    "metrics": [
+      "0",
+      "0",
+      "No calculada",
+      "5",
+      "0",
+      "100 %"
+    ],
+    "feedback": "Snapshot artificial recibido. Los estados y contadores describen circuitos y llamadas lógicas, no disponibilidad real de SENACE o BCRP.",
+    "time": "Última consulta completada · hora local del cliente: 7/11/2026, 10:40:51 a. m.",
+    "width": 360
+  },
+  "focus": {
+    "tag": "A",
+    "text": "Saltar al contenido",
+    "outline": "solid"
+  },
+  "navigation": {
+    "consultants": true,
+    "monitor": true,
+    "focus": "contenido"
+  },
+  "errors": [],
+  "external": [],
+  "backend": []
+}

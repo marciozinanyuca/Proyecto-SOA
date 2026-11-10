@@ -1,0 +1,281 @@
+{
+  "viewports": [
+    {
+      "name": "escritorio",
+      "width": 1440,
+      "scrollWidth": 1425,
+      "ready": "Cargando…",
+      "logos": [
+        {
+          "alt": "",
+          "loaded": true
+        },
+        {
+          "alt": "",
+          "loaded": true
+        },
+        {
+          "alt": "",
+          "loaded": true
+        }
+      ],
+      "controls": [
+        {
+          "text": "HidrocarburosMineríaTODOS",
+          "w": 248.703125,
+          "h": 43.1875
+        },
+        {
+          "text": "20172018",
+          "w": 174.109375,
+          "h": 43.1875
+        },
+        {
+          "text": "Aplicar nueva selección",
+          "w": 170.84375,
+          "h": 43.1875
+        },
+        {
+          "text": "Cancelar",
+          "w": 82.09375,
+          "h": 43.1875
+        },
+        {
+          "text": "Respuesta satisfactoriaRespuesta of",
+          "w": 448,
+          "h": 43.1875
+        }
+      ]
+    },
+    {
+      "name": "tablet",
+      "width": 768,
+      "scrollWidth": 753,
+      "ready": "4",
+      "logos": [
+        {
+          "alt": "",
+          "loaded": true
+        },
+        {
+          "alt": "",
+          "loaded": true
+        },
+        {
+          "alt": "",
+          "loaded": true
+        }
+      ],
+      "controls": [
+        {
+          "text": "HidrocarburosMineríaTODOS",
+          "w": 330.5,
+          "h": 43.1875
+        },
+        {
+          "text": "20172018",
+          "w": 330.515625,
+          "h": 43.1875
+        },
+        {
+          "text": "Consultar demostración",
+          "w": 174.1875,
+          "h": 43.1875
+        },
+        {
+          "text": "Respuesta satisfactoriaRespuesta of",
+          "w": 448,
+          "h": 43.1875
+        },
+        {
+          "text": "Anterior",
+          "w": 74.796875,
+          "h": 39.109375
+        },
+        {
+          "text": "Siguiente",
+          "w": 80.359375,
+          "h": 39.109375
+        }
+      ]
+    },
+    {
+      "name": "movil",
+      "width": 375,
+      "scrollWidth": 744,
+      "ready": "4",
+      "logos": [
+        {
+          "alt": "",
+          "loaded": true
+        },
+        {
+          "alt": "",
+          "loaded": true
+        },
+        {
+          "alt": "",
+          "loaded": true
+        }
+      ],
+      "controls": [
+        {
+          "text": "HidrocarburosMineríaTODOS",
+          "w": 693.796875,
+          "h": 43.1875
+        },
+        {
+          "text": "20172018",
+          "w": 693.796875,
+          "h": 43.1875
+        },
+        {
+          "text": "Consultar demostración",
+          "w": 174.1875,
+          "h": 43.1875
+        },
+        {
+          "text": "Respuesta satisfactoriaRespuesta of",
+          "w": 448,
+          "h": 43.1875
+        },
+        {
+          "text": "Anterior",
+          "w": 74.796875,
+          "h": 39.109375
+        },
+        {
+          "text": "Siguiente",
+          "w": 80.359375,
+          "h": 39.109375
+        }
+      ]
+    }
+  ],
+  "interactions": [
+    {
+      "label": "TODOS 2018",
+      "kpis": [
+        "4",
+        "1",
+        "1.25 %"
+      ],
+      "feedback": "Selección disponible. Todos los registros e indicadores mostrados son artificiales.Los filtros editados aún no se han aplicado. Los datos corresponden a Hidrocarburos · año de inicio 2017.",
+      "rows": 3,
+      "pagination": "Mostrando 1–3 de 4 filasAnteriorPágina 1 de 2Siguiente"
+    },
+    {
+      "label": "Aplicar TODOS",
+      "kpis": [
+        "8",
+        "2",
+        "1.25 %"
+      ],
+      "feedback": "Selección disponible. Todos los registros e indicadores mostrados son artificiales.",
+      "rows": 3,
+      "pagination": "Mostrando 1–3 de 8 filasAnteriorPágina 1 de 3Siguiente"
+    },
+    {
+      "label": "Pagina siguiente",
+      "kpis": [
+        "8",
+        "2",
+        "1.25 %"
+      ],
+      "feedback": "Selección disponible. Todos los registros e indicadores mostrados son artificiales.",
+      "rows": 3,
+      "pagination": "Mostrando 4–6 de 8 filasAnteriorPágina 2 de 3Siguiente"
+    },
+    {
+      "label": "Buscar sin coincidencias",
+      "kpis": [
+        "8",
+        "2",
+        "1.25 %"
+      ],
+      "feedback": "Selección disponible. Todos los registros e indicadores mostrados son artificiales.",
+      "rows": 0,
+      "pagination": "Mostrando 0–0 de 0 filas de la búsqueda localAnteriorPágina 0 de 0Siguiente"
+    },
+    {
+      "label": "empty",
+      "kpis": [
+        "0",
+        "0",
+        "1.25 %"
+      ],
+      "feedback": "El escenario simula una respuesta SENACE oficial vacía.",
+      "rows": 0,
+      "pagination": "Mostrando 0–0 de 0 filasAnteriorPágina 0 de 0Siguiente"
+    },
+    {
+      "label": "degraded",
+      "kpis": [
+        "No disponible",
+        "No disponible",
+        "1.25 %"
+      ],
+      "feedback": "Información parcial: algunas fuentes o campos no están disponibles en este escenario.",
+      "rows": 0
+    },
+    {
+      "label": "error",
+      "kpis": [
+        "No disponible",
+        "No disponible",
+        "No disponible"
+      ],
+      "feedback": "No se pudo obtener un resultado utilizable de la demostración.",
+      "rows": 0
+    },
+    {
+      "label": "optional",
+      "kpis": [
+        "No disponible",
+        "No disponible",
+        "No disponible"
+      ],
+      "feedback": "Información parcial: algunas fuentes o campos no están disponibles en este escenario.",
+      "rows": 0
+    },
+    {
+      "label": "dates",
+      "kpis": [
+        "8",
+        "2",
+        "1.25 %"
+      ],
+      "feedback": "Hay fechas no evaluables. Los conteos describen solo los registros evaluables de la selección.",
+      "rows": 3,
+      "pagination": "Mostrando 1–3 de 8 filasAnteriorPágina 1 de 3Siguiente"
+    },
+    {
+      "label": "success",
+      "kpis": [
+        "8",
+        "2",
+        "1.25 %"
+      ],
+      "feedback": "Selección disponible. Todos los registros e indicadores mostrados son artificiales.",
+      "rows": 3,
+      "pagination": "Mostrando 1–3 de 8 filasAnteriorPágina 1 de 3Siguiente"
+    }
+  ],
+  "focus": {
+    "tag": "A",
+    "text": "Saltar al contenido",
+    "outline": "solid",
+    "width": "3px"
+  },
+  "errors": [],
+  "network": {
+    "count": 32,
+    "nonLocal": [],
+    "api": [
+      "http://127.0.0.1:5173/src/api/requests.ts",
+      "http://127.0.0.1:5173/src/api/client.ts",
+      "http://127.0.0.1:5173/src/api/adapters/dashboard.ts",
+      "http://127.0.0.1:5173/src/api/validation.ts"
+    ]
+  }
+}
