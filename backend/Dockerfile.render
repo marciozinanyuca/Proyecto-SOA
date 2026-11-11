@@ -1,0 +1,39 @@
+# Standalone Render build, with the same verified Oracle JDK used locally.
+FROM oraclelinux:8-slim@sha256:3a1318bf9606038d8056f765243a050bdd9473b9bc4f049169ce3b1fb407f6b5 AS oracle-jdk
+USER 0
+RUN microdnf install -y ca-certificates curl gzip tar \
+    && microdnf clean all
+ENV JAVA_HOME=/opt/java/jdk
+ENV PATH="/opt/java/jdk/bin:${PATH}"
+RUN curl --fail --silent --show-error --proto '=https' --tlsv1.2 --max-time 300 \
+      --output /tmp/jdk.tar.gz \
+      https://download.oracle.com/java/17/archive/jdk-17.0.12_linux-x64_bin.tar.gz \
+    && echo '311f1448312ecab391fe2a1b2ac140d6e1c7aea6fbf08416b466a58874f2b40f  /tmp/jdk.tar.gz' | sha256sum --check --strict \
+    && mkdir -p "$JAVA_HOME" \
+    && tar --extract --gzip --file /tmp/jdk.tar.gz --directory "$JAVA_HOME" --strip-components=1 \
+    && rm /tmp/jdk.tar.gz \
+    && java -version 2>&1 | grep -F '17.0.12' \
+    && java -XshowSettings:properties -version 2>&1 | grep -F 'java.vendor = Oracle Corporation'
+
+FROM maven:3.9.9-eclipse-temurin-17@sha256:f58d59b6273e785ac0a4477f6e9b5ba1d7731c75b906c0f7b34076f1851318cc AS maven-distribution
+
+FROM oracle-jdk AS build
+COPY --from=maven-distribution /usr/share/maven /opt/maven
+ENV MAVEN_HOME=/opt/maven
+ENV PATH="/opt/maven/bin:${PATH}"
+WORKDIR /build
+COPY pom.xml ./
+COPY src ./src
+RUN mvn --batch-mode --no-transfer-progress -Dmaven.test.skip=true package \
+    && cp target/soa-0.0.1-SNAPSHOT.jar /build/application.jar
+
+FROM oracle-jdk AS runtime
+WORKDIR /app
+COPY --from=build --chown=10001:10001 /build/application.jar /app/application.jar
+# Reuse the validated stateless cloud profile. Spring environment overrides its port.
+ENV SPRING_PROFILES_ACTIVE=azure
+ENV SERVER_PORT=10000
+ENV JAVA_TOOL_OPTIONS="-Xms64m -Xmx256m -XX:+UseSerialGC -XX:+ExitOnOutOfMemoryError"
+USER 10001:10001
+EXPOSE 10000
+ENTRYPOINT ["java", "-jar", "/app/application.jar"]
