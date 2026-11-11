@@ -1,0 +1,11 @@
+**
+!pom.xml
+!src/
+!src/main/
+!src/main/**
+src/test/
+**/.env*
+**/*.db
+**/*.sqlite*
+**/target/
+# Tests, target, databases and local configuration never enter the build context.

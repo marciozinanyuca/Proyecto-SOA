@@ -4,6 +4,35 @@ import { createConsultorasSource, createDashboardSource, createMonitorSource, fe
 
 const httpEnv = { VITE_API_MODE: 'http', VITE_API_BASE_URL: 'http://127.0.0.1:8081', VITE_HTTP_FEATURES: 'monitor' };
 
+test('nube resuelve same-origin desde el navegador sin aceptar destinos externos configurados', async () => {
+  const config = parseSourceConfig({ ...httpEnv, VITE_API_BASE_URL: 'same-origin' }, 'https://ecoinvest.example');
+  assert.equal(config.valid, true);
+  assert.equal(config.baseUrl, 'https://ecoinvest.example');
+  assert.equal(sourcePresentation(config).heading, 'BACKEND HTTP CONFIGURADO');
+  const requests = [];
+  const api = createMonitorSource(config, 'monitor', async url => {
+    requests.push(String(url)); return new Response('{}');
+  });
+  assert.equal(requests.length, 0);
+  await api.estadoServicios();
+  assert.deepEqual(requests, ['https://ecoinvest.example/api/estado-servicios']);
+  assert.equal((await api.datastream('CarteraProyectos')).issue, 'CONFIGURACION_INVALIDA');
+  assert.equal(requests.length, 1);
+  assert.equal(parseSourceConfig({ ...httpEnv, VITE_API_BASE_URL: 'https://other.example' }).valid, false);
+});
+
+test('same-origin no admite origen ausente, credenciales, prefijos, query, fragmentos o HTTP remoto', () => {
+  for (const origin of [undefined, '', 'http://other.example', 'https://user:password@example.test',
+    'https://example.test/api', 'https://example.test?key=artificial', 'https://example.test/#dashboard']) {
+    const config = parseSourceConfig({ ...httpEnv, VITE_API_BASE_URL: 'same-origin' }, origin);
+    assert.equal(config.valid, false);
+    assert.equal(config.reason, 'URL_INVALIDA');
+  }
+  const local = parseSourceConfig({ ...httpEnv, VITE_API_BASE_URL: 'same-origin' }, 'http://127.0.0.1:8080');
+  assert.equal(local.valid, true);
+  assert.equal(local.baseUrl, 'http://127.0.0.1:8080');
+});
+
 test('7D shell describe configuracion HTTP sin afirmar conexion o respuesta recibida', () => {
   const presentation = sourcePresentation(parseSourceConfig(httpEnv));
   assert.equal(presentation.stage, 'Modo HTTP seleccionado');

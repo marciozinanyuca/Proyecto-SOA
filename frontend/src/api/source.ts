@@ -24,14 +24,14 @@ export function sourcePresentation(config: SourceConfig) {
     note: 'Sin consultas a proveedores.', entitiesLabel,
   };
   return {
-    stage: 'Modo HTTP seleccionado', heading: 'BACKEND LOCAL CONFIGURADO',
+    stage: 'Modo HTTP seleccionado', heading: new URL(config.baseUrl).hostname === '127.0.0.1' ? 'BACKEND LOCAL CONFIGURADO' : 'BACKEND HTTP CONFIGURADO',
     description: 'Consulta manual; resultados y procedencia en cada vista.',
     note: 'La configuración no acredita conexión activa ni disponibilidad externa.', entitiesLabel,
   };
 }
 
 /** Solo configuracion publica; no importa ni evalua archivos del backend. */
-export function parseSourceConfig(env: PublicSourceEnv): SourceConfig {
+export function parseSourceConfig(env: PublicSourceEnv, browserOrigin?: string): SourceConfig {
   const mode = env.VITE_API_MODE === undefined ? 'mock' : env.VITE_API_MODE.trim();
   if (mode !== 'mock' && mode !== 'http') return { valid: false, reason: 'MODO_INVALIDO' };
   const features = env.VITE_HTTP_FEATURES?.trim() ?? '';
@@ -43,9 +43,13 @@ export function parseSourceConfig(env: PublicSourceEnv): SourceConfig {
   let baseUrl: string | null = null;
   if (rawUrl) {
     try {
-      const url = new URL(rawUrl);
-      // Integracion progresiva: solo destino local y base sin prefijo /api.
-      if (url.protocol !== 'http:' || url.hostname !== '127.0.0.1' || url.port !== '8081'
+      // En nube, el destino se obtiene del origen del navegador, no de una URL externa arbitraria.
+      const sameOrigin = rawUrl === 'same-origin';
+      const url = new URL(sameOrigin ? browserOrigin ?? '' : rawUrl);
+      const allowedOrigin = sameOrigin
+        ? url.protocol === 'https:' || (url.protocol === 'http:' && ['127.0.0.1', 'localhost'].includes(url.hostname))
+        : url.protocol === 'http:' && url.hostname === '127.0.0.1' && url.port === '8081';
+      if (!allowedOrigin
           || url.pathname !== '/' || url.search || url.hash || url.username || url.password) {
         return { valid: false, reason: 'URL_INVALIDA' };
       }

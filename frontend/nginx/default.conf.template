@@ -1,0 +1,44 @@
+server {
+    listen 8080;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+    server_tokens off;
+    add_header X-Content-Type-Options nosniff always;
+    add_header Referrer-Policy strict-origin-when-cross-origin always;
+
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 'ok\n';
+    }
+
+    # Only operations used by the four views. Generic datastream remains blocked.
+    location ~ ^/api/(dashboard|consultoras|estado-servicios)$ {
+        if ($request_method != GET) { return 405; }
+        access_log off;
+        proxy_pass https://${BACKEND_FQDN};
+        proxy_set_header Host ${BACKEND_FQDN};
+        proxy_ssl_server_name on;
+        proxy_ssl_name ${BACKEND_FQDN};
+        proxy_ssl_verify on;
+        proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 45s;
+        proxy_send_timeout 10s;
+        proxy_next_upstream off;
+        proxy_buffering off;
+        proxy_hide_header Access-Control-Allow-Origin;
+        proxy_hide_header Access-Control-Allow-Credentials;
+        add_header Cache-Control no-store always;
+        add_header X-Content-Type-Options nosniff always;
+    }
+
+    location /api/ { return 404; }
+    location = /actuator { return 404; }
+    location /actuator/ { return 404; }
+    location = /index.html {
+        add_header Cache-Control no-cache always;
+    }
+    location / { try_files $uri $uri/ /index.html; }
+}
