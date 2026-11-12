@@ -72,6 +72,13 @@ public class SenaceClient {
         return ejecutarConsultoras();
     }
 
+    /** Entrada interna LKG, sin filtro anual. El coordinador debe invocar el proxy Spring. */
+    @CircuitBreaker(name = "senace", fallbackMethod = "fallbackCarteraCompleta")
+    public ResultadoConsultaSenace<ProyectoMapeado> consultarCarteraCompleta() {
+        RespuestaTransporte respuesta = recibir(Recurso.CARTERA_PROYECTOS);
+        return mapearCarteraCompleta(deserializarLista(respuesta, ProyectoSenaceDto.class), respuesta);
+    }
+
     /** Adaptador transitorio: errores no se convierten en conteos oficiales cero. */
     @CircuitBreaker(name = "senace", fallbackMethod = "fallbackSenace")
     public List<Map<String, Object>> obtenerProyectos(String sector, Integer anio) {
@@ -113,22 +120,7 @@ public class SenaceClient {
         ResultadoConsultaSenace<?> consulta;
         if (recurso == Recurso.CARTERA_PROYECTOS) {
             List<ProyectoSenaceDto> rows = deserializarLista(respuesta, ProyectoSenaceDto.class);
-            List<ProyectoMapeado> mapeados = new ArrayList<>();
-            try {
-                // Generico sin filtro: no aplicar el default anual 2017 a este recurso.
-                for (ProyectoSenaceDto row : rows) mapeados.add(mapper.mapearProyecto(row));
-            } catch (IllegalArgumentException exception) {
-                Motivo motivo = "FILA_NULA".equals(exception.getMessage()) ? Motivo.FILA_NULA
-                        : "ID_AUSENTE".equals(exception.getMessage()) ? Motivo.ID_AUSENTE : Motivo.FORMATO_INVALIDO;
-                throw fallo(EstadoConsulta.FORMATO_INVALIDO, motivo, respuesta.cuerpoCompleto(), rows.size());
-            }
-            consulta = new ResultadoConsultaSenace<>(mapeados, Origen.API_DIRECTA_SENACE,
-                    rows.isEmpty() ? EstadoConsulta.VACIA : EstadoConsulta.EXITO, EstadoFiltrado.NO_APLICABLE,
-                    Cobertura.NO_VERIFICADA, respuesta.cuerpoCompleto(),
-                    rows.isEmpty() ? Motivo.RESPUESTA_OFICIAL_VACIA : null,
-                    new Conteos(rows.size(), rows.size(), rows.size(), null,
-                            (int) mapeados.stream().filter(p -> p.anioInicio() == null).count(), null),
-                    mapeados.stream().flatMap(p -> p.advertencias().stream()).distinct().toList());
+            consulta = mapearCarteraCompleta(rows, respuesta);
             data = rows;
         } else if (recurso == Recurso.CONSULTORAS_AMBIENTALES) {
             List<ConsultoraSenaceDto> rows = deserializarLista(respuesta, ConsultoraSenaceDto.class);
@@ -148,6 +140,25 @@ public class SenaceClient {
         result.put("consulta", metadatos(consulta));
         result.put("recursoValidado", recurso.verificado());
         return result;
+    }
+
+    private ResultadoConsultaSenace<ProyectoMapeado> mapearCarteraCompleta(
+            List<ProyectoSenaceDto> rows, RespuestaTransporte respuesta) {
+        List<ProyectoMapeado> mapeados = new ArrayList<>();
+        try {
+            for (ProyectoSenaceDto row : rows) mapeados.add(mapper.mapearProyecto(row));
+        } catch (IllegalArgumentException exception) {
+            Motivo motivo = "FILA_NULA".equals(exception.getMessage()) ? Motivo.FILA_NULA
+                    : "ID_AUSENTE".equals(exception.getMessage()) ? Motivo.ID_AUSENTE : Motivo.FORMATO_INVALIDO;
+            throw fallo(EstadoConsulta.FORMATO_INVALIDO, motivo, respuesta.cuerpoCompleto(), rows.size());
+        }
+        return new ResultadoConsultaSenace<>(mapeados, Origen.API_DIRECTA_SENACE,
+                rows.isEmpty() ? EstadoConsulta.VACIA : EstadoConsulta.EXITO, EstadoFiltrado.NO_APLICABLE,
+                Cobertura.NO_VERIFICADA, respuesta.cuerpoCompleto(),
+                rows.isEmpty() ? Motivo.RESPUESTA_OFICIAL_VACIA : null,
+                new Conteos(rows.size(), rows.size(), rows.size(), null,
+                        (int) mapeados.stream().filter(p -> p.anioInicio() == null).count(), null),
+                mapeados.stream().flatMap(p -> p.advertencias().stream()).distinct().toList());
     }
 
     private ResultadoConsultaSenace<ProyectoMapeado> ejecutarProyectos(String sector, Integer anio) {
@@ -274,6 +285,10 @@ public class SenaceClient {
     }
 
     public ResultadoConsultaSenace<ConsultoraMapeada> fallbackConsultaConsultoras(Throwable failure) {
+        return ausencia(failure);
+    }
+
+    public ResultadoConsultaSenace<ProyectoMapeado> fallbackCarteraCompleta(Throwable failure) {
         return ausencia(failure);
     }
 

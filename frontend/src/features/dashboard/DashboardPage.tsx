@@ -3,13 +3,16 @@ import type { FormEvent } from 'react';
 import { createLatestRequest } from '../../api/requests';
 import type { SourceConfig } from '../../api/source';
 import { NavigationIcon } from '../../components/NavigationIcon';
+import { originLabel, usableBcrp } from '../../api/lkg';
 import type { DashboardDemoState } from '../../mocks/fixtures';
-import { dashboardHttpStore, displayValue, distribution, httpSectorSuggestions, initialQuery, knownProjects, loadDashboardDemo, loadDashboardHttp, scenarios, sectors, selectTable, stateMessage, years } from './dashboardModel';
+import { dashboardBackupWarnings, dashboardHttpStore, displayValue, distribution, httpSectorSuggestions, initialQuery, knownProjects, loadDashboardDemo, loadDashboardHttp, scenarios, sectors, selectTable, stateMessage, years } from './dashboardModel';
 import type { DashboardQuery, DashboardSnapshot } from './dashboardModel';
 import './DashboardPage.css';
 
-function Source({ value, mode }: { readonly value: string | undefined; readonly mode: 'mock' | 'http' }) {
-  return <span className="dash-source">{value ?? 'Procedencia no disponible'} <span>{mode === 'mock' ? '· escenario simulado' : '· procedencia informada'}</span></span>;
+function Source({ value, mode, provider = 'SENACE' }: { readonly value: string | undefined; readonly mode: 'mock' | 'http'; readonly provider?: 'SENACE' | 'BCRP' }) {
+  const label = value === 'API_DIRECTA_SENACE' || value === 'API_DIRECTA_BCRP' ? 'API directa'
+    : value === 'RESPALDO_LOCAL' ? 'Respaldo local' : value === 'SIN_RESPALDO' ? 'Sin respaldo utilizable' : 'No disponible';
+  return <span className="dash-source" title={originLabel(value)}>{provider} · {label} <span>{mode === 'mock' ? '· escenario simulado' : '· procedencia informada'}</span></span>;
 }
 
 export function DashboardPage({ source }: { readonly source: SourceConfig }) {
@@ -48,8 +51,9 @@ export function DashboardPage({ source }: { readonly source: SourceConfig }) {
   const max = Math.max(1, ...(bars?.map((bar) => bar.count) ?? []));
   const table = selectTable(projects, search, page);
   const economic = data?.indicadorBcrp;
+  const backupWarnings = dashboardBackupWarnings(data);
   const senaceKnown = projects !== undefined;
-  const economicKnown = economic?.origen === 'API_DIRECTA_BCRP' && economic.valor !== undefined;
+  const economicKnown = usableBcrp(economic);
   const changed = snapshot && (snapshot.query.sector !== draft.sector || snapshot.query.anio !== draft.anio || (isMock && snapshot.scenario !== scenario));
   const busy = phase === 'loading';
   const queryLabel = snapshot ? `${snapshot.query.sector} · año de inicio ${snapshot.query.anio}` : isMock ? 'Consulta de demostración' : 'Sin consulta HTTP completada';
@@ -79,12 +83,17 @@ export function DashboardPage({ source }: { readonly source: SourceConfig }) {
     </div>
 
     <div className="dash-data" aria-busy={busy}>
+      {backupWarnings.length > 0 && <aside className="dash-backup-alert" aria-label="Avisos de respaldo de esta consulta">
+        {isMock && <strong>Escenario artificial de demostración.</strong>}
+        {backupWarnings.map(warning => <p key={warning}>{warning}</p>)}
+      </aside>}
       <section className="dash-kpis" aria-label="Indicadores de la selección">
         <article className="surface dash-kpi"><div className="dash-kpi-head"><span className="eyebrow">CARTERA SELECCIONADA</span><span className="dash-kpi-icon"><NavigationIcon kind="dashboard" /></span></div><h2>Registros de proyectos</h2><p className="dash-kpi-value">{busy ? 'Cargando…' : displayValue(senaceKnown ? data?.total : undefined)}</p><p className="dash-kpi-unit">Filtrados por actividad y año de inicio</p><Source mode={mode} value={data?.fuentes?.senace ?? data?.consultaSenace?.origen} /><div className="dash-kpi-footer">{senaceKnown ? 'Selección conocida; no proyectos únicos certificados.' : 'Conteo SENACE no disponible.'}</div></article>
         <article className="surface dash-kpi"><div className="dash-kpi-head"><span className="eyebrow">ESTADO SENACE</span><span className="dash-kpi-icon dash-kpi-icon--green"><NavigationIcon kind="consultoras" /></span></div><h2>Registros aprobados</h2><p className="dash-kpi-value dash-positive">{busy ? 'Cargando…' : displayValue(senaceKnown ? data?.aprobados : undefined)}</p><p className="dash-kpi-unit">Con estado Aprobado en esta selección</p><Source mode={mode} value={data?.fuentes?.senace ?? data?.consultaSenace?.origen} /><div className="dash-kpi-footer">No representa viabilidad ni habilitación administrativa.</div></article>
-        <article className="surface dash-kpi"><div className="dash-kpi-head"><span className="eyebrow">CONTEXTO MACROECONÓMICO</span><span className="dash-kpi-icon"><NavigationIcon kind="monitor" /></span></div><h2>Indicador económico BCRP</h2><p className={`dash-kpi-value${economicKnown && economic.valor! < 0 ? ' dash-negative' : ''}`}>{busy ? 'Cargando…' : economicKnown ? `${displayValue(economic.valor)} %` : 'No disponible'}</p><p className="dash-kpi-unit">{economic?.unidad ?? 'Unidad no disponible'} · período {economic?.periodo ?? 'no disponible'}</p><Source mode={mode} value={economic?.origen} /><div className="dash-kpi-footer">{economic?.sectorEconomico ?? 'Ámbito económico no disponible'} · {economic?.codigoSerie ?? 'sin serie'}</div></article>
+        <article className="surface dash-kpi"><div className="dash-kpi-head"><span className="eyebrow">CONTEXTO MACROECONÓMICO</span><span className="dash-kpi-icon"><NavigationIcon kind="monitor" /></span></div><h2>Indicador económico BCRP</h2><p className={`dash-kpi-value${economicKnown && economic.valor! < 0 ? ' dash-negative' : ''}`}>{busy ? 'Cargando…' : economicKnown ? `${displayValue(economic.valor)} %` : 'No disponible'}</p><p className="dash-kpi-unit">{economic?.unidad ?? 'Unidad no disponible'} · período {economic?.periodo ?? 'no disponible'}</p><Source provider="BCRP" mode={mode} value={economic?.origen} /><div className="dash-kpi-footer">{economic?.sectorEconomico ?? 'Ámbito económico no disponible'} · {economic?.codigoSerie ?? 'sin serie'}</div></article>
       </section>
 
+      {snapshot && <p className="dash-backup-link"><a href="#/monitor">Ver detalles de SENACE, BCRP y respaldos en el Monitor de Salud SOA</a></p>}
       <section className="surface dash-chart" aria-labelledby="distribution-heading">
         <div className="dash-panel-heading"><div><span className="eyebrow">REGISTROS DE LA SELECCIÓN</span><h2 id="distribution-heading">Distribución por estado</h2><p>{queryLabel}. Sin series mensuales ni correlación económica.</p></div><span className="dash-legend"><i aria-hidden="true" />Cantidad de registros</span></div>
         {bars === undefined ? <div className="dash-empty">{busy ? 'Esperando la selección…' : 'Distribución no disponible: no hay una lista utilizable de proyectos.'}</div> : bars.length === 0 ? <div className="dash-empty">La selección conocida está vacía. No hay registros para distribuir.</div> : <>

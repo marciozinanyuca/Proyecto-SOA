@@ -9,7 +9,7 @@ paths:
   /api/dashboard:
     get:
       summary: Obtener datos del dashboard consolidados
-      description: SENACE se consulta una sola vez. Ante fallo se conserva el indicador BCRP disponible y se omiten métricas SENACE desconocidas. Los conteos describen registros filtrados evaluables, no proyectos únicos certificados.
+      description: SENACE se consulta una sola vez. Proveedores independientes; con LKG opt-in se admite respaldo validado no vencido, nunca presentado como API directa. lkg.intentoApi conserva el fallo externo. Los conteos describen registros filtrados evaluables, no proyectos únicos certificados.
       operationId: obtenerDashboard
       parameters:
         - name: sector
@@ -41,7 +41,7 @@ paths:
       operationId: obtenerEstadoServicios
       responses:
         '200':
-          description: Estado de los circuitos y métricas lógicas; respaldo local NO_IMPLEMENTADO.
+          description: Circuitos y métricas lógicas. Sin LKG conserva NO_IMPLEMENTADO; habilitado informa operaciones locales observadas, no disponibilidad externa ni integridad continua del disco.
           content:
             application/json:
               schema:
@@ -53,7 +53,7 @@ paths:
       operationId: obtenerConsultoras
       responses:
         '200':
-          description: Filas oficiales o array oficial vacío, con procedencia independiente de la primera fila.
+          description: Filas directas o respaldo LKG utilizable con origen explícito; puede ser array vacío conocido. No implica éxito del intento API actual.
           headers:
             X-Senace-Origen:
               $ref: '#/components/headers/SenaceOrigen'
@@ -65,6 +65,20 @@ paths:
               $ref: '#/components/headers/SenaceMotivo'
             X-Senace-Cuerpo-Completo:
               $ref: '#/components/headers/SenaceCuerpoCompleto'
+            X-Senace-Respaldo-Capturado-En:
+              $ref: '#/components/headers/LkgCapturadoEn'
+            X-Senace-Respaldo-Edad-Segundos:
+              $ref: '#/components/headers/LkgEdad'
+            X-Senace-Respaldo-Antiguo:
+              $ref: '#/components/headers/LkgAntiguo'
+            X-Senace-Intento-Estado:
+              $ref: '#/components/headers/LkgIntentoEstado'
+            X-Senace-Intento-Motivo:
+              $ref: '#/components/headers/LkgIntentoMotivo'
+            X-Senace-Snapshot-Lectura:
+              $ref: '#/components/headers/LkgLectura'
+            X-Senace-Snapshot-Escritura:
+              $ref: '#/components/headers/LkgEscritura'
           content:
             application/json:
               schema:
@@ -72,7 +86,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/ConsultoraSenacePublica'
         '502':
-          description: JSON, codificación o estructura del proveedor inválidos. Cuerpo [] y motivo seguro.
+          description: Formato externo inválido sin respaldo utilizable. Cuerpo [], nunca cero oficial.
           headers:
             X-Senace-Origen:
               $ref: '#/components/headers/SenaceOrigen'
@@ -84,6 +98,14 @@ paths:
               $ref: '#/components/headers/SenaceMotivo'
             X-Senace-Cuerpo-Completo:
               $ref: '#/components/headers/SenaceCuerpoCompleto'
+            X-Senace-Intento-Estado:
+              $ref: '#/components/headers/LkgIntentoEstado'
+            X-Senace-Intento-Motivo:
+              $ref: '#/components/headers/LkgIntentoMotivo'
+            X-Senace-Snapshot-Lectura:
+              $ref: '#/components/headers/LkgLectura'
+            X-Senace-Snapshot-Escritura:
+              $ref: '#/components/headers/LkgEscritura'
           content:
             application/json:
               schema:
@@ -103,6 +125,14 @@ paths:
               $ref: '#/components/headers/SenaceMotivo'
             X-Senace-Cuerpo-Completo:
               $ref: '#/components/headers/SenaceCuerpoCompleto'
+            X-Senace-Intento-Estado:
+              $ref: '#/components/headers/LkgIntentoEstado'
+            X-Senace-Intento-Motivo:
+              $ref: '#/components/headers/LkgIntentoMotivo'
+            X-Senace-Snapshot-Lectura:
+              $ref: '#/components/headers/LkgLectura'
+            X-Senace-Snapshot-Escritura:
+              $ref: '#/components/headers/LkgEscritura'
           content:
             application/json:
               schema:
@@ -113,7 +143,7 @@ paths:
   /api/senace/datastream:
     get:
       summary: Consultar un datastream de SENACE
-      description: Conserva envolvente y recursos existentes. Los dos recursos verificados usan data array; proyectos no aplica filtro anual en esta ruta. Los otros seis conservan objeto y ruta heredados sin certificación de esquema o éxito semántico.
+      description: Camino directo sin LKG en Bloque 3A, incluso para los dos recursos verificados. Conserva envolvente; los dos recursos usan data array sin filtro anual. Los otros seis mantienen objeto y ruta heredados sin certificación de esquema ni respaldo automático.
       operationId: consultarDatastream
       parameters:
         - name: nombre
@@ -162,9 +192,38 @@ components:
       schema:
         $ref: '#/components/schemas/MotivoSenace'
     SenaceCuerpoCompleto:
-      description: Evidencia del final del cuerpo HTTP; se omite cuando se desconoce. No acredita validez o cobertura.
+      description: Evidencia del cuerpo utilizado; con RESPALDO_LOCAL corresponde a la captura histórica, no al intento API actual. Se omite cuando se desconoce; no acredita cobertura.
       schema:
         type: boolean
+    LkgCapturadoEn:
+      description: Fecha UTC de captura persistida confirmada, presente solo si se conoce. No timestamp del proveedor.
+      schema:
+        type: string
+        format: date-time
+    LkgEdad:
+      description: Edad en segundos de la captura confirmada; no edad del dato económico ni cobertura.
+      schema:
+        type: integer
+        format: int64
+        minimum: 0
+    LkgAntiguo:
+      description: Supera stale-after pero no implica que se haya utilizado un respaldo vencido.
+      schema:
+        type: boolean
+    LkgIntentoEstado:
+      description: Estado seguro del intento API actual, separado del estado de los datos entregados; solo modo LKG.
+      schema:
+        type: string
+    LkgIntentoMotivo:
+      description: Motivo seguro opcional del intento API actual; sin URLs ni cuerpos.
+      schema:
+        type: string
+    LkgLectura:
+      schema:
+        $ref: '#/components/schemas/LkgEstadoLectura'
+    LkgEscritura:
+      schema:
+        $ref: '#/components/schemas/LkgEstadoEscritura'
   schemas:
     DashboardResponse:
       type: object
@@ -180,7 +239,7 @@ components:
         variacionSeleccionada:
           type: number
           x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
-          description: Variación porcentual interanual del PBI del ámbito económico indicado en indicadorBcrp, correspondiente exactamente al año solicitado. Coincide con indicadorBcrp.valor. Se omite cuando no existe observación; fuentes.bcrp indica NO_DISPONIBLE. Nunca se sustituye por constantes.
+          description: Variación porcentual interanual del PBI del ámbito económico indicado, exactamente del año solicitado. Coincide con indicadorBcrp.valor; con LKG puede proceder de captura histórica identificada. Ausencia se omite, nunca se sustituye por constantes.
         indicadorBcrp:
           $ref: '#/components/schemas/IndicadorBcrp'
         proyectos:
@@ -200,7 +259,7 @@ components:
           $ref: '#/components/schemas/OrigenSenace'
         bcrp:
           type: string
-          description: API_DIRECTA_BCRP o NO_DISPONIBLE, independiente del resultado SENACE.
+          description: API_DIRECTA_BCRP, RESPALDO_LOCAL o SIN_RESPALDO con LKG; NO_DISPONIBLE se conserva en modo histórico. Independiente de SENACE.
         sectorConsultado:
           type: string
         anioConsultado:
@@ -329,7 +388,7 @@ components:
         cuerpoCompleto:
           type: boolean
           x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
-          description: Evidencia HTTP de completitud; se omite si se desconoce. Puede ser true aunque el contenido sea inválido.
+          description: Completitud del cuerpo utilizado. En respaldo corresponde a su captura; lkg.intentoApi.cuerpoCompleto distingue el intento actual. No demuestra cobertura.
         motivo:
           $ref: '#/components/schemas/MotivoSenace'
           x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
@@ -339,6 +398,9 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AdvertenciaSenace'
+        lkg:
+          $ref: '#/components/schemas/LkgMetadata'
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
     ConteosSenace:
       type: object
       description: Conteos conocidos de registros. Ausencia significa desconocido o no aplicable; nunca se sustituye por cero.
@@ -394,7 +456,7 @@ components:
             type: string
     OrigenSenace:
       type: string
-      enum: [API_DIRECTA_SENACE, NO_DISPONIBLE]
+      enum: [API_DIRECTA_SENACE, NO_DISPONIBLE, RESPALDO_LOCAL, SIN_RESPALDO]
     EstadoConsultaSenace:
       type: string
       enum: [EXITO, VACIA, ERROR_EXTERNO, FORMATO_INVALIDO, PARCIAL]
@@ -455,7 +517,7 @@ components:
           description: Decimal oficial sin conversión intermedia a double. Se omite cuando falta la observación.
         origen:
           type: string
-          description: API_DIRECTA_BCRP o NO_DISPONIBLE; coherente con fuentes.bcrp.
+          description: API_DIRECTA_BCRP, RESPALDO_LOCAL, SIN_RESPALDO o NO_DISPONIBLE histórico; coherente con fuentes.bcrp.
         motivo:
           type: string
           x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
@@ -464,13 +526,120 @@ components:
           type: string
           x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
           description: URL de una sola serie con rango anual inicio=fin e idioma esp. Se omite si no puede construirse una consulta válida.
+        lkg:
+          $ref: '#/components/schemas/LkgMetadata'
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
     EstadoServiciosResponse:
       type: object
-      description: Métricas de llamadas lógicas y estado de circuitos, sin HTTP a proveedores. No acreditan disponibilidad externa. respaldoLocal es NO_IMPLEMENTADO; no se implementa un respaldo SQLite.
+      description: Métricas lógicas sin HTTP a proveedores. LKG opcional expone últimas observaciones del proceso, no inventario completo del disco. Sin LKG respaldoLocal conserva NO_IMPLEMENTADO.
       properties:
         senace:
           type: object
-          description: servicio, estado, tasaFallosPorcentaje, llamadasFallidas, llamadasExitosas y respaldoLocal; alcanceMetricas LLAMADAS_LOGICAS y disponibilidadExterna NO_VERIFICADA.
+          description: servicio, estado, tasaFallosPorcentaje, llamadasFallidas, llamadasExitosas y respaldoLocal. Este último conserva NO_IMPLEMENTADO sin LKG; habilitado distingue HABILITADO_SIN_VERIFICACION, OPERATIVO y CON_INCIDENCIAS. Métricas LLAMADAS_LOGICAS y disponibilidadExterna NO_VERIFICADA permanecen independientes.
         bcrp:
           type: object
           description: Mismas métricas del circuito BCRP; no una prueba de disponibilidad del proveedor.
+        lkg:
+          $ref: '#/components/schemas/EstadoModuloLkg'
+          x-field-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+    LkgMetadata:
+      type: object
+      x-class-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+      description: Solo con LKG habilitado. Respaldo describe captura persistida confirmada; ausencia no demuestra que no exista un archivo previo. Fallo de almacenamiento no invalida datos directos.
+      properties:
+        intentoApi:
+          $ref: '#/components/schemas/LkgIntentoApi'
+        respaldo:
+          $ref: '#/components/schemas/LkgRespaldo'
+        lectura:
+          $ref: '#/components/schemas/LkgEstadoLectura'
+        escritura:
+          $ref: '#/components/schemas/LkgEstadoEscritura'
+    LkgIntentoApi:
+      type: object
+      x-class-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+      properties:
+        estado:
+          type: string
+          enum: [EXITO, VACIA, ERROR_EXTERNO, FORMATO_INVALIDO, PARCIAL, NO_EVALUABLE, SIN_OBSERVACION]
+        motivo:
+          type: string
+          description: Código permitido de SENACE/BCRP; nunca mensaje de excepción. BCRP conserva ERROR_EXTERNO cuando el fallback no distingue OPEN.
+        cuerpoCompleto:
+          type: boolean
+    LkgRespaldo:
+      type: object
+      x-class-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+      properties:
+        capturadoEn:
+          type: string
+          format: date-time
+        edadSegundos:
+          type: integer
+          format: int64
+          minimum: 0
+        antiguo:
+          type: boolean
+        versionEsquema:
+          type: integer
+        cobertura:
+          $ref: '#/components/schemas/CoberturaSenace'
+    LkgEstadoLectura:
+      type: string
+      enum: [AVAILABLE, MISSING, EXPIRED, INVALID, IO_ERROR, OWNERSHIP_UNAVAILABLE]
+    LkgEstadoEscritura:
+      type: string
+      enum: [SAVED, INVALID, EMPTY_REPLACEMENT_REJECTED, OLDER_RESPONSE_REJECTED, IO_ERROR, ATOMIC_MOVE_UNSUPPORTED, OWNERSHIP_UNAVAILABLE]
+    EstadoModuloLkg:
+      type: object
+      properties:
+        estado:
+          type: string
+          enum: [HABILITADO_SIN_VERIFICACION, OPERATIVO, CON_INCIDENCIAS]
+        alcance:
+          type: string
+          enum: [ULTIMAS_OBSERVACIONES_DEL_PROCESO]
+        limiteObservaciones:
+          type: integer
+        observaciones:
+          type: array
+          items:
+            $ref: '#/components/schemas/ObservacionSnapshot'
+    ObservacionSnapshot:
+      type: object
+      x-class-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+      description: Última observación local por clave; no certifica existencia/integridad en tiempo real. Sin observación tras reinicio no se presume MISSING. La captura puede ser la última válida conocida aunque una lectura posterior resulte inválida.
+      properties:
+        fuente:
+          type: string
+          enum: [SENACE, BCRP]
+        recurso:
+          type: string
+        periodo:
+          type: string
+        existencia:
+          type: string
+          enum: [EXISTE, NO_EXISTE, NO_VERIFICADA]
+        integridad:
+          type: string
+          enum: [VALIDADA, INVALIDA, NO_VERIFICADA]
+        observadoEn:
+          type: string
+          format: date-time
+        verificadoEn:
+          type: string
+          format: date-time
+        ultimaCapturaValida:
+          type: string
+          format: date-time
+        edadSegundos:
+          type: integer
+          format: int64
+        antiguo:
+          type: boolean
+        vencido:
+          type: boolean
+        lectura:
+          $ref: '#/components/schemas/LkgEstadoLectura'
+        escritura:
+          $ref: '#/components/schemas/LkgEstadoEscritura'

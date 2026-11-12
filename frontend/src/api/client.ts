@@ -43,7 +43,9 @@ export function createApiClient(options: Options): ApiClient {
       return { ...base, issue: signal?.aborted || (error instanceof Error && error.name === 'AbortError') ? 'CANCELADA' : 'RED' };
     }
     const headers: Record<string, string> = {};
-    for (const name of ['content-type', 'x-senace-origen', 'x-senace-estado', 'x-senace-cobertura', 'x-senace-motivo', 'x-senace-cuerpo-completo']) {
+    for (const name of ['content-type', 'x-senace-origen', 'x-senace-estado', 'x-senace-cobertura', 'x-senace-motivo', 'x-senace-cuerpo-completo',
+      'x-senace-respaldo-capturado-en', 'x-senace-respaldo-edad-segundos', 'x-senace-respaldo-antiguo',
+      'x-senace-intento-estado', 'x-senace-intento-motivo', 'x-senace-snapshot-lectura', 'x-senace-snapshot-escritura']) {
       const value = response.headers.get(name);
       if (value !== null) headers[name] = value;
     }

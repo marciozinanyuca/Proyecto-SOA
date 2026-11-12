@@ -6,7 +6,7 @@ import type { SourceConfig } from '../../api/source.js';
 import type { FetchLike, HttpResult } from '../../api/client.js';
 import { adaptDashboard } from '../../api/adapters/dashboard.js';
 import type { Adapted, DashboardResponse, ProyectoSenacePublico } from '../../api/types.js';
-import { official } from '../../api/validation.js';
+import { ageLabel, captureLabel, usableSenace } from '../../api/lkg.js';
 import { createMockFetch } from '../../mocks/mockFetch.js';
 import type { DashboardDemoState, Scenario } from '../../mocks/fixtures.js';
 
@@ -16,6 +16,26 @@ export interface DashboardSnapshot {
 }
 export const dashboardDemoStore = createDemoSelectionStore<DashboardSnapshot>();
 export const dashboardHttpStore = createDashboardSelectionStore<DashboardSnapshot>();
+
+/** Avisos de esta respuesta, no del estado global ni de una consulta nueva al Monitor. */
+export function dashboardBackupWarnings(data: DashboardResponse | undefined): string[] {
+  const warnings: string[] = [];
+  for (const [source, origin, metadata] of [
+    ['SENACE', data?.consultaSenace?.origen, data?.consultaSenace?.lkg],
+    ['BCRP', data?.indicadorBcrp?.origen, data?.indicadorBcrp?.lkg],
+  ] as const) {
+    if (origin === 'RESPALDO_LOCAL') {
+      const stored = metadata?.respaldo;
+      const capture = stored?.capturadoEn ? ` · captura ${captureLabel(stored.capturadoEn)}` : '';
+      const age = stored?.edadSegundos !== undefined ? ` · edad ${ageLabel(stored.edadSegundos)}` : '';
+      warnings.push(`${source}: respaldo local${capture}${age}${stored?.antiguo ? ' · respaldo antiguo' : ''}. No es una consulta nueva satisfactoria al proveedor.`);
+    }
+    if (metadata?.escritura && ['IO_ERROR', 'INVALID', 'ATOMIC_MOVE_UNSUPPORTED', 'OWNERSHIP_UNAVAILABLE'].includes(metadata.escritura)) {
+      warnings.push(`${source}: no se pudo actualizar el respaldo. Esto no invalida los datos directos recibidos.`);
+    }
+  }
+  return warnings;
+}
 export const initialQuery: Readonly<DashboardQuery> = { sector: 'Hidrocarburos', anio: 2017 };
 export const sectors = ['Hidrocarburos', 'Minería', 'TODOS'] as const;
 export const years = [2017, 2018] as const;
@@ -26,6 +46,12 @@ export const scenarios: readonly { value: DashboardDemoState; label: string }[] 
   { value: 'noMatches', label: 'Sin coincidencias' }, { value: 'degraded', label: 'SENACE indisponible · BCRP disponible' },
   { value: 'config', label: 'Configuración SENACE ausente' }, { value: 'dates', label: 'Fechas no evaluables' },
   { value: 'optional', label: 'Campos opcionales ausentes' }, { value: 'error', label: 'Error HTTP artificial' },
+  { value: 'lkgSenace', label: 'LKG artificial · respaldo SENACE' },
+  { value: 'lkgBcrp', label: 'LKG artificial · respaldo BCRP' },
+  { value: 'lkgBoth', label: 'LKG artificial · ambas fuentes' },
+  { value: 'lkgOld', label: 'LKG artificial · respaldo antiguo' },
+  { value: 'lkgMissing', label: 'LKG artificial · sin respaldo' },
+  { value: 'lkgWriteFailure', label: 'LKG artificial · API directa, escritura fallida' },
 ];
 /** Reutiliza el transporte mock aprobado. Ningun camino construye mode:http. */
 export async function loadDashboardDemo(query: DashboardQuery, scenario: DashboardDemoState, signal?: AbortSignal): Promise<DashboardSnapshot> {
@@ -55,7 +81,7 @@ export async function loadDashboardHttp(query: DashboardQuery, config: SourceCon
 }
 /** Desconocido no se convierte en lista vacia ni se agrega como cero. */
 export function knownProjects(result: Adapted<DashboardResponse>): ProyectoSenacePublico[] | undefined {
-  return result.state !== 'error' && official(result.data?.consultaSenace) ? result.data?.proyectos : undefined;
+  return result.state !== 'error' && usableSenace(result.data?.consultaSenace) ? result.data?.proyectos : undefined;
 }
 export function distribution(rows: readonly ProyectoSenacePublico[] | undefined): { estado: string; count: number }[] | undefined {
   if (rows === undefined) return undefined;
@@ -77,6 +103,9 @@ export function selectTable(rows: readonly ProyectoSenacePublico[] | undefined, 
 }
 export const displayValue = (value: number | undefined): string => value === undefined ? 'No disponible' : value.toLocaleString('es-PE');
 export function stateMessage(result: Adapted<DashboardResponse>, mode: 'mock' | 'http' = 'mock'): string {
+  if (result.state !== 'error' && (result.data?.consultaSenace?.origen === 'RESPALDO_LOCAL' || result.data?.indicadorBcrp?.origen === 'RESPALDO_LOCAL')) {
+    return `${mode === 'mock' ? 'Escenario artificial: ' : ''}datos disponibles mediante respaldo local. Revisa por separado captura, antigüedad e intento API de SENACE y BCRP; no se acredita disponibilidad externa actual.`;
+  }
   if (mode === 'http') {
     if (result.state === 'error') return 'No se obtuvo una respuesta utilizable del backend. No se activan mocks.';
     if (result.reason === 'RESPUESTA_OFICIAL_VACIA') return 'SENACE informó una respuesta oficial vacía.';

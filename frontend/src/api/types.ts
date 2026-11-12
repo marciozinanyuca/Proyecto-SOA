@@ -2,7 +2,29 @@
  * Sin required en los modelos fuente: las propiedades se conservan opcionales.
  * number NO promete exactitud BigDecimal/int64; data generico sigue unknown.
  */
-export type OrigenSenace = 'API_DIRECTA_SENACE' | 'NO_DISPONIBLE';
+export type OrigenSenace = 'API_DIRECTA_SENACE' | 'NO_DISPONIBLE' | 'RESPALDO_LOCAL' | 'SIN_RESPALDO';
+export type LkgEstadoLectura = 'AVAILABLE' | 'MISSING' | 'EXPIRED' | 'INVALID' | 'IO_ERROR' | 'OWNERSHIP_UNAVAILABLE';
+export type LkgEstadoEscritura = 'SAVED' | 'INVALID' | 'EMPTY_REPLACEMENT_REJECTED' | 'OLDER_RESPONSE_REJECTED'
+  | 'IO_ERROR' | 'ATOMIC_MOVE_UNSUPPORTED' | 'OWNERSHIP_UNAVAILABLE';
+export type EstadoOperacionLkg = 'HABILITADO_SIN_VERIFICACION' | 'OPERATIVO' | 'CON_INCIDENCIAS';
+export interface LkgIntentoApi {
+  estado?: 'EXITO' | 'VACIA' | 'ERROR_EXTERNO' | 'FORMATO_INVALIDO' | 'PARCIAL' | 'NO_EVALUABLE' | 'SIN_OBSERVACION';
+  motivo?: string; cuerpoCompleto?: boolean;
+}
+export interface LkgRespaldo {
+  capturadoEn?: string; edadSegundos?: number; antiguo?: boolean; versionEsquema?: number; cobertura?: 'NO_VERIFICADA';
+}
+export interface LkgMetadata { intentoApi?: LkgIntentoApi; respaldo?: LkgRespaldo; lectura?: LkgEstadoLectura; escritura?: LkgEstadoEscritura }
+export interface ObservacionSnapshot {
+  fuente?: 'SENACE' | 'BCRP'; recurso?: string; periodo?: string;
+  existencia?: 'EXISTE' | 'NO_EXISTE' | 'NO_VERIFICADA'; integridad?: 'VALIDADA' | 'INVALIDA' | 'NO_VERIFICADA';
+  observadoEn?: string; verificadoEn?: string; ultimaCapturaValida?: string; edadSegundos?: number;
+  antiguo?: boolean; vencido?: boolean; lectura?: LkgEstadoLectura; escritura?: LkgEstadoEscritura;
+}
+export interface EstadoModuloLkg {
+  estado?: EstadoOperacionLkg; alcance?: 'ULTIMAS_OBSERVACIONES_DEL_PROCESO'; limiteObservaciones?: number;
+  observaciones?: ObservacionSnapshot[];
+}
 export type EstadoConsulta = 'EXITO' | 'VACIA' | 'ERROR_EXTERNO' | 'FORMATO_INVALIDO' | 'PARCIAL';
 export type EstadoFiltrado = 'APLICADO' | 'SIN_COINCIDENCIAS' | 'NO_EVALUABLE' | 'NO_APLICABLE';
 export type MotivoSenace = 'RESPUESTA_OFICIAL_VACIA' | 'SIN_COINCIDENCIAS' | 'FECHAS_NO_EVALUABLES'
@@ -19,7 +41,7 @@ export interface ConteosSenace {
 export interface ConsultaSenace {
   estado?: EstadoConsulta; origen?: OrigenSenace; estadoFiltrado?: EstadoFiltrado;
   cobertura?: 'NO_VERIFICADA'; cuerpoCompleto?: boolean; motivo?: MotivoSenace;
-  conteos?: ConteosSenace; advertencias?: AdvertenciaSenace[];
+  conteos?: ConteosSenace; advertencias?: AdvertenciaSenace[]; lkg?: LkgMetadata;
 }
 export interface ProyectoSenacePublico {
   id?: number; titular?: string; ruc?: string; titulo?: string; proyecto?: string;
@@ -35,7 +57,7 @@ export interface IndicadorBcrp {
   codigoSerie?: string; descripcion?: string; unidad?: string; periodicidad?: string;
   sectorSolicitado?: string; sectorEconomico?: string; ambito?: string;
   anioSolicitado?: number; periodo?: string; valor?: number; origen?: string;
-  motivo?: string; urlFuente?: string;
+  motivo?: string; urlFuente?: string; lkg?: LkgMetadata;
 }
 export interface DashboardResponse {
   total?: number; aprobados?: number; variacionSeleccionada?: number;
@@ -48,12 +70,12 @@ export interface DatastreamResponse {
   recursoValidado?: boolean; mensaje?: string; datastreamsSoportados?: string[];
 }
 /** OpenAPI solo tipa estos dos objetos, no sus propiedades internas. */
-export interface EstadoServiciosResponse { senace?: Record<string, unknown>; bcrp?: Record<string, unknown> }
+export interface EstadoServiciosResponse { senace?: Record<string, unknown>; bcrp?: Record<string, unknown>; lkg?: EstadoModuloLkg }
 /** Vista adaptada del objeto documentado; no modifica el contrato generado. */
 export interface CircuitMetrics {
   servicio?: string; estado?: string; tasaFallosPorcentaje?: number;
   llamadasFallidas?: number; llamadasExitosas?: number;
-  alcanceMetricas?: 'LLAMADAS_LOGICAS'; disponibilidadExterna?: 'NO_VERIFICADA'; respaldoLocal?: 'NO_IMPLEMENTADO';
+  alcanceMetricas?: 'LLAMADAS_LOGICAS'; disponibilidadExterna?: 'NO_VERIFICADA'; respaldoLocal?: 'NO_IMPLEMENTADO' | EstadoOperacionLkg;
 }
 export type ViewState = 'ready' | 'empty' | 'degraded' | 'error';
 export interface Adapted<T> {

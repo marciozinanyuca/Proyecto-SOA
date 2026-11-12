@@ -17,6 +17,11 @@ import com.ecoinvest.model.MotivoSenace;
 import com.ecoinvest.model.OrigenSenace;
 import com.ecoinvest.model.ProyectoSenacePublico;
 import com.ecoinvest.soa.client.BcrpClient;
+import com.ecoinvest.soa.client.BcrpSnapshotCoordinator;
+import com.ecoinvest.soa.client.SenaceSnapshotCoordinator;
+import com.ecoinvest.soa.snapshot.ResultadoLkg;
+import com.ecoinvest.soa.snapshot.SnapshotStatusService;
+import com.ecoinvest.soa.snapshot.SnapshotKey;
 import com.ecoinvest.soa.client.ResultadoConsultaSenace;
 import com.ecoinvest.soa.client.ResultadoConsultaSenace.Advertencia;
 import com.ecoinvest.soa.client.ResultadoConsultaSenace.Conteos;
@@ -38,6 +43,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.function.Supplier;
 import org.springframework.http.HttpHeaders;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -55,6 +61,10 @@ public class EcoInvestController implements ApiApi {
     private final SenaceClient senaceClient;
     private final BcrpClient bcrpClient;
     private final CircuitBreakerRegistry circuitBreakerRegistry;
+    private SenaceSnapshotCoordinator senaceLkg;
+    private BcrpSnapshotCoordinator bcrpLkg;
+    private SnapshotStatusService lkgStatus;
+    private final LkgPublicMapper lkgMapper = new LkgPublicMapper();
 
     public EcoInvestController(SenaceClient senaceClient, BcrpClient bcrpClient,
                                CircuitBreakerRegistry circuitBreakerRegistry) {
@@ -63,10 +73,20 @@ public class EcoInvestController implements ApiApi {
         this.circuitBreakerRegistry = circuitBreakerRegistry;
     }
 
+    /** Si el modulo no esta registrado se conserva el constructor y camino historicos. */
+    @Autowired(required = false)
+    public void configurarLkg(SenaceSnapshotCoordinator senace, BcrpSnapshotCoordinator bcrp,
+            SnapshotStatusService status) {
+        this.senaceLkg = senace;
+        this.bcrpLkg = bcrp;
+        this.lkgStatus = status;
+    }
+
     @Override
     public ResponseEntity<DashboardResponse> obtenerDashboard(String sector, Integer anio) {
         String sectorFiltro = sector != null && !sector.isBlank() ? sector : "Hidrocarburos";
         Integer anioFiltro = anio != null ? anio : 2017;
+        if (senaceLkg != null) return dashboardLkg(sectorFiltro, anioFiltro);
         ResultadoConsultaSenace<ProyectoMapeado> senace = consultarSeguro(
                 () -> senaceClient.consultarProyectos(sectorFiltro, anioFiltro));
 
@@ -106,8 +126,17 @@ public class EcoInvestController implements ApiApi {
     }
 
     @Override
-    @CrossOrigin(exposedHeaders = {ORIGEN, ESTADO, COBERTURA, MOTIVO, COMPLETO})
+    @CrossOrigin(exposedHeaders = {ORIGEN, ESTADO, COBERTURA, MOTIVO, COMPLETO,
+            LkgPublicMapper.CAPTURE, LkgPublicMapper.AGE, LkgPublicMapper.STALE, LkgPublicMapper.ATTEMPT,
+            LkgPublicMapper.REASON, LkgPublicMapper.READ, LkgPublicMapper.WRITE})
     public ResponseEntity<List<ConsultoraSenacePublica>> obtenerConsultoras() {
+        if (senaceLkg != null) {
+            ResultadoLkg<List<ConsultoraMapeada>> result = lkgSeguro(senaceLkg::consultarConsultoras);
+            ConsultaSenace consulta = lkgMapper.senace(result);
+            List<ConsultoraSenacePublica> rows = lkgMapper.availableSenace(result)
+                    ? result.datos().stream().map(this::consultoraPublica).toList() : List.of();
+            return ResponseEntity.status(lkgMapper.status(result)).headers(lkgMapper.headers(result, consulta)).body(rows);
+        }
         ResultadoConsultaSenace<ConsultoraMapeada> resultado = consultarSeguro(senaceClient::consultarConsultoras);
         ConsultaSenace consulta = consultaPublica(resultado);
         List<ConsultoraSenacePublica> filas = disponible(resultado)
@@ -156,7 +185,64 @@ public class EcoInvestController implements ApiApi {
         EstadoServiciosResponse response = new EstadoServiciosResponse();
         response.setSenace(construirMetricasCircuitBreaker("senace"));
         response.setBcrp(construirMetricasCircuitBreaker("bcrp"));
+        if (lkgStatus != null) {
+            response.setLkg(lkgMapper.monitor(lkgStatus.snapshot()));
+            return ResponseEntity.ok().header(HttpHeaders.CACHE_CONTROL, "no-store").body(response);
+        }
         return ResponseEntity.ok(response);
+    }
+
+    private ResponseEntity<DashboardResponse> dashboardLkg(String sector, Integer anio) {
+        ResultadoLkg<List<ProyectoMapeado>> senace = lkgSeguro(() -> senaceLkg.consultarProyectos(sector, anio));
+        // La recuperacion local de SENACE nunca impide evaluar BCRP, y viceversa.
+        ResultadoLkg<Map<String, Object>> bcrp = lkgSeguro(() -> bcrpLkg.consultar(sector, anio));
+        Map<String, Object> economics = bcrp.datos();
+        if (economics == null) {
+            try { economics = bcrpLkg.contextoConsulta(sector, anio); }
+            catch (RuntimeException ignored) { economics = null; }
+        }
+        IndicadorBcrp indicador = indicadorBcrp(economics, sector, anio);
+        indicador.setOrigen(bcrp.origen().name());
+        indicador.setLkg(lkgMapper.metadata(bcrp));
+        if (bcrp.datos() == null) {
+            indicador.setValor(null);
+            indicador.setPeriodo(null);
+            indicador.setMotivo(LkgPublicMapper.safeReason(bcrp.intentoApi().motivo()));
+        }
+        ConsultaSenace consulta = lkgMapper.senace(senace);
+        FuentesDashboard fuentes = new FuentesDashboard();
+        fuentes.setSenace(consulta.getOrigen());
+        fuentes.setBcrp(indicador.getOrigen());
+        fuentes.setSectorConsultado(sector);
+        fuentes.setAnioConsultado(anio);
+        DashboardResponse out = new DashboardResponse();
+        out.setFuentes(fuentes);
+        out.setConsultaSenace(consulta);
+        out.setIndicadorBcrp(indicador);
+        out.setVariacionSeleccionada(indicador.getValor());
+        if (lkgMapper.availableSenace(senace)) {
+            out.setTotal(senace.calidadSenace().conteos().devueltos());
+            out.setAprobados(senace.calidadSenace().conteos().aprobados());
+            out.setProyectos(senace.datos().stream().map(row -> {
+                ProyectoSenacePublico project = proyectoPublico(row);
+                project.setOrigen(consulta.getOrigen());
+                return project;
+            }).toList());
+        } else {
+            out.setTotal(null);
+            out.setAprobados(null);
+            out.setProyectos(null);
+        }
+        return ResponseEntity.ok().header(HttpHeaders.CACHE_CONTROL, "no-store").body(out);
+    }
+
+    private static <T> ResultadoLkg<T> lkgSeguro(Supplier<ResultadoLkg<T>> source) {
+        try {
+            ResultadoLkg<T> result = source.get();
+            if (result != null) return result;
+        } catch (RuntimeException ignored) { /* Sin URI, mensaje, cuerpo ni causa externa. */ }
+        return new ResultadoLkg<>(null, ResultadoLkg.Origen.SIN_RESPALDO,
+                new ResultadoLkg.IntentoApi("ERROR_EXTERNO", "ERROR_EXTERNO", null), null, null, null, null);
     }
 
     private static <T> ResultadoConsultaSenace<T> consultarSeguro(Supplier<ResultadoConsultaSenace<T>> consulta) {
@@ -382,6 +468,10 @@ public class EcoInvestController implements ApiApi {
         info.put("llamadasFallidas", metrics.getNumberOfFailedCalls());
         info.put("llamadasExitosas", metrics.getNumberOfSuccessfulCalls());
         info.put("respaldoLocal", "NO_IMPLEMENTADO");
+        if (lkgStatus != null) {
+            info.put("respaldoLocal", lkgStatus.state("senace".equals(nombreInstancia)
+                    ? SnapshotKey.Source.SENACE : SnapshotKey.Source.BCRP));
+        }
         info.put("alcanceMetricas", "LLAMADAS_LOGICAS");
         info.put("disponibilidadExterna", "NO_VERIFICADA");
         return info;
