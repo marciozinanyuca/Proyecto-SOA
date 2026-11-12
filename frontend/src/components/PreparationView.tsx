@@ -6,6 +6,7 @@ const sections: Record<ViewId, readonly string[]> = {
   explorador: ['Contexto de consulta', 'Mapa y lista accesible', 'Ficha del proyecto'],
   consultoras: ['Búsqueda y selección', 'Resumen de filas', 'Tabla y detalle'],
   monitor: ['Contexto de las métricas', 'Circuitos SENACE y BCRP', 'Alcance y limitaciones'],
+usuarios: ['Gestión de usuarios pendiente de integración'],
 };
 
 export function PreparationView({ page }: { readonly page: NavigationItem }) {

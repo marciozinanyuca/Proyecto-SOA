@@ -1,0 +1,200 @@
+body {
+  display: block;
+  min-width: 320px;
+  margin: 0;
+  background: #eef4f1;
+}
+
+#root {
+  width: 100%;
+  max-width: none;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: #eef4f1;
+  color: #172e27;
+  font: 400 15px/1.5 "Segoe UI", system-ui, sans-serif;
+  text-align: left;
+}
+
+#root > main {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(270px, 310px);
+  grid-template-rows: auto auto auto 1fr;
+  column-gap: 24px;
+  align-content: start;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 36px 24px;
+}
+
+/* Cabecera */
+main > p:first-child,
+main > h1 {
+  grid-column: 1 / -1;
+  margin: 0;
+  background: linear-gradient(110deg, #103d31, #17634c);
+  color: #fff;
+}
+
+main > p:first-child {
+  padding: 24px 28px 4px;
+  border-radius: 18px 18px 0 0;
+  color: #b4edcf;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+main > h1 {
+  margin-bottom: 26px;
+  padding: 4px 28px 28px;
+  border-radius: 0 0 18px 18px;
+  font-size: clamp(26px, 4vw, 42px);
+  line-height: 1.15;
+  letter-spacing: -.03em;
+}
+
+/* Tabla */
+main > table {
+  grid-column: 1;
+  grid-row: 3 / 5;
+  align-self: start;
+  width: 100%;
+  border: 1px solid #dbe7e0;
+  border-spacing: 0;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 8px 24px #173c2b0a;
+}
+
+main :is(th, td) {
+  padding: 14px 12px;
+  border-bottom: 1px solid #e8efeb;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+main th {
+  background: #f5faf7;
+  color: #3d5a4d;
+  font-size: 12px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+main th:first-child { border-top-left-radius: 16px; }
+main th:last-child { border-top-right-radius: 16px; }
+main tbody tr:last-child td { border-bottom: 0; }
+main tbody tr:hover { background: #f7fbf9; }
+main td:first-child { font-weight: 650; }
+main td:nth-child(3) { color: #49645a; font-size: 12px; }
+
+/* Formulario */
+main > h2,
+main > form {
+  grid-column: 2;
+  margin: 0;
+  border: 1px solid #dbe7e0;
+  background: #fff;
+}
+
+main > h2 {
+  padding: 18px 20px 0;
+  border-bottom: 0;
+  border-radius: 16px 16px 0 0;
+  color: #172e27;
+  font-size: 21px;
+}
+
+main > form {
+  align-self: start;
+  padding: 16px 20px 20px;
+  border-top: 0;
+  border-radius: 0 0 16px 16px;
+  box-shadow: 0 8px 24px #173c2b0a;
+}
+
+main form p { margin: 0 0 13px; }
+
+main form label {
+  display: grid;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+main :is(input, select) {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid #bdcec5;
+  border-radius: 8px;
+  background: #fff;
+  color: #172e27;
+  font: inherit;
+}
+
+main button {
+  padding: 7px 10px;
+  border: 1px solid #b8d7c7;
+  border-radius: 8px;
+  background: #ecf7f0;
+  color: #15563d;
+  font: 650 13px "Segoe UI", system-ui, sans-serif;
+  cursor: pointer;
+}
+
+main button:hover { background: #d9efe2; }
+
+main form button {
+  width: 100%;
+  min-height: 42px;
+  border-color: #17634c;
+  background: #17634c;
+  color: #fff;
+}
+
+main form button:hover { background: #104b39; }
+main button:disabled { opacity: .65; cursor: wait; }
+
+main :is(input, select, button):focus-visible {
+  outline: 2px solid #23825d;
+  outline-offset: 2px;
+}
+
+main > [role="status"] {
+  grid-column: 1 / -1;
+  margin: 16px 0 0;
+  padding: 12px 16px;
+  border: 1px solid #b8d7c7;
+  border-radius: 10px;
+  background: #e3f3ea;
+}
+
+@media (max-width: 920px) {
+  #root > main {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    padding: 20px 14px;
+  }
+
+  main > :is(table, h2, form) { grid-column: 1; grid-row: auto; }
+  main > h2 { margin-top: 20px; }
+}
+
+@media (max-width: 560px) {
+  main > table {
+    display: block;
+    overflow-x: auto;
+  }
+
+  main :is(th, td) {
+    min-width: 85px;
+    padding: 10px 8px;
+  }
+}
