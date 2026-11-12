@@ -59,6 +59,14 @@ caption.monitor-sr { display: block; }
 .monitor-table tbody :is(td, th) { padding: 1rem; border-bottom: 1px solid #f1f5f9; }
 .monitor-query-meta { padding: 1.4rem; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; margin: 0; }
 .monitor-limitations { padding: 1.5rem; }
+.monitor-lkg { min-width: 0; max-width: 100%; padding: 1.2rem; }
+.monitor-dashboard-details { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+.monitor-dashboard-details > * { min-width: 0; }
+.monitor-dashboard-details > p, .monitor-dashboard-details header p { margin: 0; }
+.monitor-lkg h2 { font-size: 1.05rem; margin: .3rem 0 .8rem; }
+.monitor-lkg p, .monitor-lkg caption { font-size: .75rem; line-height: 1.7; overflow-wrap: anywhere; }
+.monitor-lkg caption { padding: .8rem; text-align: left; }
+.monitor-lkg .monitor-table { min-width: 58rem; }
 .monitor-limitations-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.2rem; margin-top: 1rem; }
 .monitor-limitations-grid article { border: 1px solid #e2e8f0; border-radius: .5rem; padding: 1rem; background: #f8fafc; }
 .monitor-limitations h3 { font-size: .85rem; margin: 0; }

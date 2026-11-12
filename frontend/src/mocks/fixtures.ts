@@ -1,4 +1,4 @@
-import type { ConsultaSenace, ConsultoraSenacePublica, DashboardResponse, ProyectoSenacePublico } from '../api/types.js';
+import type { ConsultaSenace, ConsultoraSenacePublica, DashboardResponse, ProyectoSenacePublico, LkgMetadata } from '../api/types.js';
 
 /** TODOS los registros y valores de este archivo son artificiales.
  * API_DIRECTA en un fixture describe un escenario contractual, no una observacion.
@@ -23,7 +23,22 @@ const headers = { 'X-Senace-Origen': 'API_DIRECTA_SENACE', 'X-Senace-Estado': 'E
 // No modifica los fixtures historicos ni consulta/filtra datasets oficiales.
 export type DashboardDemoSector = 'Hidrocarburos' | 'Minería' | 'TODOS';
 export type DashboardDemoYear = 2017 | 2018;
-export type DashboardDemoState = 'success' | 'empty' | 'noMatches' | 'degraded' | 'config' | 'dates' | 'optional' | 'error';
+export type DashboardDemoState = 'success' | 'empty' | 'noMatches' | 'degraded' | 'config' | 'dates' | 'optional' | 'error'
+  | 'lkgSenace' | 'lkgBcrp' | 'lkgBoth' | 'lkgOld' | 'lkgMissing' | 'lkgWriteFailure';
+
+// Capturas, edades y motivos ARTIFICIALES para pruebas del contrato; no proceden del disco o proveedor.
+const mockCapture = { capturadoEn: '2026-11-10T12:00:00Z', edadSegundos: 3600, antiguo: false,
+  versionEsquema: 1, cobertura: 'NO_VERIFICADA' } as const;
+const mockBackup: LkgMetadata = { intentoApi: { estado: 'ERROR_EXTERNO', motivo: 'ERROR_HTTP', cuerpoCompleto: false },
+  respaldo: mockCapture, lectura: 'AVAILABLE' };
+const mockDirect: LkgMetadata = { intentoApi: { estado: 'EXITO', cuerpoCompleto: true }, respaldo: { ...mockCapture, edadSegundos: 0 }, escritura: 'SAVED' };
+const mockWriteFailure: LkgMetadata = { intentoApi: { estado: 'EXITO', cuerpoCompleto: true }, escritura: 'IO_ERROR' };
+const mockOld: LkgMetadata = { ...mockBackup, respaldo: { ...mockCapture, edadSegundos: 1728000, antiguo: true } };
+const mockMissing: LkgMetadata = { intentoApi: { estado: 'ERROR_EXTERNO', motivo: 'ERROR_HTTP' }, lectura: 'MISSING' };
+const backupHeaders = { ...headers, 'X-Senace-Origen': 'RESPALDO_LOCAL',
+  'X-Senace-Respaldo-Capturado-En': mockCapture.capturadoEn, 'X-Senace-Respaldo-Edad-Segundos': '3600',
+  'X-Senace-Respaldo-Antiguo': 'false', 'X-Senace-Intento-Estado': 'ERROR_EXTERNO',
+  'X-Senace-Intento-Motivo': 'ERROR_HTTP', 'X-Senace-Snapshot-Lectura': 'AVAILABLE' };
 type DemoKey = `dashboardDemo:${DashboardDemoSector}:${DashboardDemoYear}:${DashboardDemoState}`;
 const demoVariants = {} as Record<DemoKey, Fixture>;
 for (const sector of ['Hidrocarburos', 'Minería', 'TODOS'] as const) {
@@ -63,6 +78,20 @@ for (const sector of ['Hidrocarburos', 'Minería', 'TODOS'] as const) {
       conteos: { ...meta.conteos, recibidos: allRows.length + 1, aceptados: allRows.length + 1, fechasNoEvaluables: 1, fechasNoEvaluablesEnActividad: 1 } } });
     put('optional', {});
     put('error', { mensaje: 'ERROR ARTIFICIAL DE DEMOSTRACIÓN' }, 503);
+    for (const state of ['lkgSenace', 'lkgBcrp', 'lkgBoth', 'lkgOld'] as const) {
+      const backedSenace = state !== 'lkgBcrp', backedBcrp = state !== 'lkgSenace';
+      const senaceOrigin = backedSenace ? 'RESPALDO_LOCAL' : 'API_DIRECTA_SENACE';
+      const bcrpOrigin = backedBcrp ? 'RESPALDO_LOCAL' : 'API_DIRECTA_BCRP';
+      const stored = state === 'lkgOld' ? mockOld : mockBackup;
+      put(state, { ...base, proyectos: rows.map(row => ({ ...row, origen: senaceOrigin })),
+        consultaSenace: { ...meta, origen: senaceOrigin, lkg: backedSenace ? stored : mockDirect },
+        indicadorBcrp: { ...economic, origen: bcrpOrigin, lkg: backedBcrp ? stored : mockDirect },
+        fuentes: { ...base.fuentes, senace: senaceOrigin, bcrp: bcrpOrigin } });
+    }
+    put('lkgWriteFailure', { ...base, consultaSenace: { ...meta, lkg: mockWriteFailure }, indicadorBcrp: { ...economic, lkg: mockWriteFailure } });
+    put('lkgMissing', { consultaSenace: { ...failed, origen: 'SIN_RESPALDO', motivo: 'ERROR_HTTP', lkg: mockMissing },
+      indicadorBcrp: { codigoSerie: code, anioSolicitado: year, origen: 'SIN_RESPALDO', motivo: 'ERROR_EXTERNO', lkg: mockMissing },
+      fuentes: { ...base.fuentes, senace: 'SIN_RESPALDO', bcrp: 'SIN_RESPALDO' } });
   }
 }
 type GeoKey = `exploradorDemo:${DashboardDemoSector}:${DashboardDemoYear}`;
@@ -92,6 +121,26 @@ const consultantRows: ConsultoraSenacePublica[] = Array.from({ length: 12 }, (_,
 }));
 consultantRows.push({ ...consultantRows[0] }, {});
 export const fixtures = {
+  consultorasLkg: { status: 200, body: consultantRows, headers: backupHeaders },
+  consultorasLkgOld: { status: 200, body: consultantRows, headers: { ...backupHeaders, 'X-Senace-Respaldo-Antiguo': 'true', 'X-Senace-Respaldo-Edad-Segundos': '1728000' } },
+  consultorasLkgEmpty: { status: 200, body: [], headers: { ...backupHeaders, 'X-Senace-Estado': 'VACIA', 'X-Senace-Motivo': 'RESPUESTA_OFICIAL_VACIA' } },
+  consultorasLkg502: { status: 502, body: [], headers: { ...headers, 'X-Senace-Origen': 'SIN_RESPALDO', 'X-Senace-Estado': 'FORMATO_INVALIDO', 'X-Senace-Motivo': 'FORMATO_INVALIDO', 'X-Senace-Intento-Estado': 'FORMATO_INVALIDO', 'X-Senace-Intento-Motivo': 'FORMATO_INVALIDO', 'X-Senace-Snapshot-Lectura': 'EXPIRED' } },
+  consultorasLkg503: { status: 503, body: [], headers: { ...headers, 'X-Senace-Origen': 'SIN_RESPALDO', 'X-Senace-Estado': 'ERROR_EXTERNO', 'X-Senace-Motivo': 'ERROR_HTTP', 'X-Senace-Cuerpo-Completo': 'false', 'X-Senace-Intento-Estado': 'ERROR_EXTERNO', 'X-Senace-Intento-Motivo': 'ERROR_HTTP', 'X-Senace-Snapshot-Lectura': 'MISSING' } },
+  consultorasLkgWriteFailure: { status: 200, body: consultantRows, headers: { ...headers, 'X-Senace-Intento-Estado': 'EXITO', 'X-Senace-Snapshot-Escritura': 'IO_ERROR' } },
+  monitorLkgUnverified: { status: 200, body: {
+    senace: { ...circuit, respaldoLocal: 'HABILITADO_SIN_VERIFICACION' }, bcrp: { ...circuit, servicio: 'BCRP', respaldoLocal: 'HABILITADO_SIN_VERIFICACION' },
+    lkg: { estado: 'HABILITADO_SIN_VERIFICACION', alcance: 'ULTIMAS_OBSERVACIONES_DEL_PROCESO', limiteObservaciones: 128, observaciones: [] } } },
+  monitorLkgOperational: { status: 200, body: {
+    senace: { ...circuit, respaldoLocal: 'OPERATIVO' }, bcrp: { ...circuit, servicio: 'BCRP', respaldoLocal: 'HABILITADO_SIN_VERIFICACION' },
+    lkg: { estado: 'OPERATIVO', alcance: 'ULTIMAS_OBSERVACIONES_DEL_PROCESO', limiteObservaciones: 128,
+      observaciones: [{ fuente: 'SENACE', recurso: 'CarteraProyectos', existencia: 'EXISTE', integridad: 'VALIDADA',
+        observadoEn: mockCapture.capturadoEn, verificadoEn: mockCapture.capturadoEn, ultimaCapturaValida: mockCapture.capturadoEn,
+        edadSegundos: 3600, antiguo: false, vencido: false, lectura: 'AVAILABLE', escritura: 'SAVED' }] } } },
+  monitorLkgIncident: { status: 200, body: {
+    senace: { ...circuit, estado: 'OPEN', respaldoLocal: 'CON_INCIDENCIAS' }, bcrp: { ...circuit, servicio: 'BCRP', respaldoLocal: 'HABILITADO_SIN_VERIFICACION' },
+    lkg: { estado: 'CON_INCIDENCIAS', alcance: 'ULTIMAS_OBSERVACIONES_DEL_PROCESO', limiteObservaciones: 128,
+      observaciones: [{ fuente: 'SENACE', recurso: 'ConsultorasAmbientales', existencia: 'NO_VERIFICADA', integridad: 'INVALIDA',
+        observadoEn: mockCapture.capturadoEn, lectura: 'INVALID' }] } } },
   consultorasDemoSuccess: { status: 200, body: consultantRows, headers },
   consultorasDemoNoHeaders: { status: 200, body: consultantRows },
   consultorasDemoEmptyNoHeaders: { status: 200, body: [] },

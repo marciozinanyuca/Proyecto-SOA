@@ -1,0 +1,3 @@
+# LKG local: depende del directorio de ejecucion; nunca versionar snapshots.
+/snapshots/
+/backend/snapshots/

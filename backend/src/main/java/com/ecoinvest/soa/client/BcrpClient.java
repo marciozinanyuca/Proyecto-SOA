@@ -149,6 +149,11 @@ public class BcrpClient {
         }
     }
 
+    /** Contexto interno sin HTTP, para reconstruir metadatos desde el catalogo vigente. */
+    Map<String, Object> contextoConsulta(String sector, Integer anio) {
+        return resultadoBase(sector, anio);
+    }
+
     private Map<String, Object> resultadoBase(String sector, Integer anio) {
         int anioSolicitado = anio != null ? anio : 2017;
         Serie serie = SERIES_POR_SECTOR.get(normalizarSector(sector));

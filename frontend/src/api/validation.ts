@@ -1,6 +1,7 @@
 import type { Adapted, ConsultaSenace } from './types.js';
+import { lkgMetadata } from './lkg.js';
 
-export const origins = ['API_DIRECTA_SENACE', 'NO_DISPONIBLE'] as const;
+export const origins = ['API_DIRECTA_SENACE', 'NO_DISPONIBLE', 'RESPALDO_LOCAL', 'SIN_RESPALDO'] as const;
 export const queryStates = ['EXITO', 'VACIA', 'ERROR_EXTERNO', 'FORMATO_INVALIDO', 'PARCIAL'] as const;
 export const filterStates = ['APLICADO', 'SIN_COINCIDENCIAS', 'NO_EVALUABLE', 'NO_APLICABLE'] as const;
 export const reasons = ['RESPUESTA_OFICIAL_VACIA', 'SIN_COINCIDENCIAS', 'FECHAS_NO_EVALUABLES', 'LISTA_AUSENTE', 'FILA_NULA', 'ID_AUSENTE', 'ERROR_EXTERNO', 'FORMATO_INVALIDO', 'LIMITE_LECTURA', 'RESPUESTA_PARCIAL', 'CONFIGURACION_AUSENTE', 'CONFIGURACION_INVALIDA', 'CIRCUITO_ABIERTO', 'DESTINO_INVALIDO', 'RECURSO_INVALIDO', 'REDIRECCION_RECHAZADA', 'ERROR_HTTP', 'ERROR_TLS', 'TIMEOUT_CONEXION', 'TIMEOUT_INACTIVIDAD', 'PLAZO_TOTAL_AGOTADO', 'CODIFICACION_NO_ADMITIDA', 'INTERRUMPIDO'] as const;
@@ -26,6 +27,7 @@ export function consulta(value: unknown): value is ConsultaSenace {
     estado: oneOf(queryStates), origen: oneOf(origins), estadoFiltrado: oneOf(filterStates),
     cobertura: oneOf(['NO_VERIFICADA']), cuerpoCompleto: boolean, motivo: oneOf(reasons),
     advertencias: arrayOf(oneOf(notices)),
+    lkg: lkgMetadata,
     conteos: (v) => fields(v, Object.fromEntries(['recibidos', 'aceptados', 'devueltos', 'aprobados', 'fechasNoEvaluables', 'fechasNoEvaluablesEnActividad'].map((k) => [k, count]))),
   });
 }

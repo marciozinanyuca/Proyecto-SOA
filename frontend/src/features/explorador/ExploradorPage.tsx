@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { createLatestRequest } from '../../api/requests';
 import type { SourceConfig } from '../../api/source';
+import { LkgNotice } from '../../components/LkgNotice';
 import { sectors, years, scenarios, stateMessage } from '../dashboard/dashboardModel';
 import type { DashboardQuery, DashboardSnapshot } from '../dashboard/dashboardModel';
 import { coordinateState, createExplorerIndex, explorerSpatial, filterIndexedExplorer, initialSelection, loadExplorer, pagePointGroups, paginateExplorer, previousHttpSelection, previousSelection } from './exploradorModel';
@@ -77,6 +78,7 @@ export function ExploradorPage({ source }: { readonly source: SourceConfig }) {
     </section>
     <div className={`explorer-feedback explorer-feedback--${settled?.result.state ?? phase}`} role="status" aria-live="polite">{busy ? 'Cargando selección artificial…' : phase === 'cancelled' ? 'Consulta cancelada.' : phase === 'error' ? 'No se pudo completar la demostración.' : settled ? stateMessage(settled.result, isMock ? 'mock' : 'http') : 'Sin consulta previa. Obtén una respuesta manual desde Dashboard para explorar sus proyectos.'}{changed && <p>Filtros pendientes de aplicar. Se muestran {settled?.query.sector}, año de inicio {settled?.query.anio}.</p>}{!isMock && <p>Respuesta en memoria de esta sesión; sin garantía de frescura del proveedor. Hora de recepción del cliente: {settled?.receivedAt ? new Date(settled.receivedAt).toLocaleString('es-PE') : 'Sin respuesta'}.</p>}{busy && <button type="button" onClick={() => requests.current.cancel()}>Cancelar</button>}</div>
 
+    <LkgNotice source="SENACE" origin={settled?.result.data?.consultaSenace?.origen} metadata={settled?.result.data?.consultaSenace?.lkg} mock={isMock} />
     <div className="explorer-layout" aria-busy={busy}>
       <section className="surface explorer-spatial" aria-labelledby="spatial-title">
         <header className="explorer-panel-header"><div><span className="eyebrow">DISTRIBUCIÓN DE LA SELECCIÓN</span><h2 id="spatial-title">Esquema de coordenadas</h2><p>Visualización ilustrativa offline. Sin mapa base ni CRS certificado.</p></div><span className="explorer-offline">SIN SERVICIOS EXTERNOS</span></header>

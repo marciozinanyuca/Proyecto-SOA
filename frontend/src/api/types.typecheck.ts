@@ -1,4 +1,4 @@
-import type { ConsultoraSenacePublica, DashboardResponse, DatastreamResponse } from './types.js';
+import type { ConsultoraSenacePublica, DashboardResponse, DatastreamResponse, LkgMetadata, EstadoModuloLkg } from './types.js';
 
 // Comprobaciones estaticas de contrato; este modulo no se importa desde la aplicacion.
 const optional: DashboardResponse = {};
@@ -12,3 +12,11 @@ function unchecked(generic: DatastreamResponse) {
   return generic.data.ID;
 }
 void optional; void textRuc; void numericRuc; void invented; void unchecked;
+const optionalLkg: LkgMetadata = {};
+const backed: DashboardResponse = { consultaSenace: { origen: 'RESPALDO_LOCAL', lkg: { lectura: 'AVAILABLE' } } };
+const monitor: EstadoModuloLkg = { estado: 'HABILITADO_SIN_VERIFICACION', observaciones: [] };
+// @ts-expect-error La edad no es un texto.
+const invalidAge: LkgMetadata = { respaldo: { edadSegundos: '24' } };
+// @ts-expect-error Activo/vigente no es un estado LKG.
+const invalidState: EstadoModuloLkg = { estado: 'ACTIVO' };
+void optionalLkg; void backed; void monitor; void invalidAge; void invalidState;

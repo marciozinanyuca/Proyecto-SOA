@@ -5,7 +5,7 @@ import type { HttpResult } from '../../api/client.js';
 import { adaptConsultoras } from '../../api/adapters/consultoras.js';
 import type { ConsultorasData } from '../../api/adapters/consultoras.js';
 import type { Adapted, ConsultoraSenacePublica } from '../../api/types.js';
-import { official } from '../../api/validation.js';
+import { usableSenace } from '../../api/lkg.js';
 import type { Scenario } from '../../mocks/fixtures.js';
 
 export const consultantFields = [
@@ -22,6 +22,12 @@ export const consultantScenarios = [
   { value: 'consultorasDemoEmptyNoHeaders', label: 'HTTP 200 · array vacío sin headers SENACE' },
   { value: 'consultorasDemoInvalid', label: 'HTTP 200 · estructura JSON inválida' },
   { value: 'consultorasDemoOptional', label: 'HTTP 200 · opcionales y vacíos' },
+  { value: 'consultorasLkg', label: 'LKG artificial · filas respaldadas' },
+  { value: 'consultorasLkgOld', label: 'LKG artificial · respaldo antiguo' },
+  { value: 'consultorasLkgEmpty', label: 'LKG artificial · respaldo vacío' },
+  { value: 'consultorasLkg502', label: 'LKG artificial · 502 sin respaldo utilizable' },
+  { value: 'consultorasLkg503', label: 'LKG artificial · 503 sin respaldo' },
+  { value: 'consultorasLkgWriteFailure', label: 'LKG artificial · datos directos y fallo al guardar' },
 ] as const satisfies readonly { value: Scenario; label: string }[];
 export type ConsultantScenario = typeof consultantScenarios[number]['value'];
 export interface ConsultantSnapshot { scenario?: ConsultantScenario; http: HttpResult; result: Adapted<ConsultorasData> }
@@ -54,7 +60,7 @@ export function consultantKpis(snapshot: ConsultantSnapshot | undefined, filtere
   const rows = usableRows(snapshot);
   // Un [] sin procedencia no acredita el vacío oficial. Las filas no vacías se
   // cuentan como recibidas sin afirmar que proceden oficialmente de SENACE.
-  const known = rows !== undefined && (rows.length > 0 || official(snapshot?.result.data?.consulta));
+  const known = rows !== undefined && (rows.length > 0 || usableSenace(snapshot?.result.data?.consulta, false));
   return { received: known ? rows.length : undefined, filtered: known ? filtered?.length : undefined,
     withResolution: known ? filtered?.filter(({ row }) => typeof row.resolucion === 'string' && row.resolucion.trim() !== '').length : undefined };
 }
@@ -70,6 +76,8 @@ export function consultantMessage(snapshot: ConsultantSnapshot): string {
   if (snapshot.http.status === 502) return `Formato externo inválido${snapshot.http.mode === 'mock' ? ' simulado' : ''} (HTTP 502). El array de error no acredita cero consultoras.`;
   if (snapshot.http.status === 503) return `SENACE no disponible${snapshot.http.mode === 'mock' ? ' en este escenario' : ' en esta consulta'} (HTTP 503). No hay un conteo oficial conocido.`;
   if (snapshot.result.state === 'error') return 'No se obtuvo una respuesta utilizable. No se sustituyen errores por filas ni se activa una fuente alternativa.';
+  if (snapshot.result.data?.consulta.origen === 'RESPALDO_LOCAL') return `${snapshot.http.mode === 'mock' ? 'Escenario artificial: ' : ''}filas recuperadas del respaldo local. La captura es histórica y el intento API actual no fue satisfactorio. Se conservan orden, duplicados y fechas originales.`;
+  if (snapshot.result.warnings.some(value => value.includes('FALLO_AL_GUARDAR_RESPALDO'))) return 'Filas directas disponibles; falló la actualización del respaldo. No se acredita una nueva captura persistida.';
   if (snapshot.result.state === 'degraded') return 'Procedencia no confirmada: faltan metadatos SENACE. Las filas recibidas no se presentan como oficiales; un array vacío no certifica ausencia de consultoras.';
   if (snapshot.result.state === 'empty') return `Respuesta oficial vacía${snapshot.http.mode === 'mock' ? ' simulada' : ''} (HTTP 200). No equivale a un error del proveedor.`;
   return `${snapshot.http.mode === 'mock' ? 'Filas artificiales disponibles.' : 'Filas recibidas del backend con procedencia SENACE informada.'} Se conservan orden, duplicados y fechas originales, sin deducir vigencia.`;
