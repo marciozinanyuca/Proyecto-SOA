@@ -474,6 +474,7 @@ components:
       enum: [FECHA_AUSENTE, FECHA_INVALIDA, COORDENADAS_INCOMPLETAS, COORDENADAS_FUERA_DE_RANGO]
     IndicadorBcrp:
       type: object
+      x-class-extra-annotation: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
       description: Observación anual oficial BCRP o ausencia justificada. TODOS es contexto nacional, no un agregado de la cartera SENACE. Los campos económicos no disponibles se omiten.
       properties:
         codigoSerie:
