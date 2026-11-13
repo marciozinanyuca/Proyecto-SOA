@@ -38,7 +38,9 @@ export function createApiClient(options: Options): ApiClient {
     } catch { return { ...base, issue: 'CONFIGURACION_INVALIDA' }; }
     let response: Response;
     try {
-      response = await transport(url, { method: 'GET', signal, redirect: 'error', credentials: 'omit', headers: { Accept: 'application/json' } });
+      // La sesion del login se comparte solo con el mismo origen (proxy Vite/Vercel).
+      // Nunca enviar cookies a un backend de otro origen ni al transporte artificial.
+      response = await transport(url, { method: 'GET', signal, redirect: 'error', credentials: options.mode === 'http' ? 'same-origin' : 'omit', headers: { Accept: 'application/json' } });
     } catch (error) {
       return { ...base, issue: signal?.aborted || (error instanceof Error && error.name === 'AbortError') ? 'CANCELADA' : 'RED' };
     }

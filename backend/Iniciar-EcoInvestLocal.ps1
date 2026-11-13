@@ -1,17 +1,23 @@
 #requires -Version 5.1
 <#
 .SYNOPSIS
-Arranca exclusivamente el backend real local, con LKG opt-in y sin SQLite/JPA.
+Arranca el backend local con autenticacion SQLite y LKG JSON opt-in.
 .DESCRIPTION
 No compila, instala, abre el frontend, consulta APIs ni importa snapshots de laboratorio.
 Preparar previamente el JAR mediante Maven offline, con autorizacion independiente.
 -CargarSenace autoriza leer SOLO SENACE_BASE_URL y SENACE_AUTH_KEY de .env.apis.local.
 La credencial se entrega al entorno del hijo Java, nunca al entorno padre o argumentos.
+-InicializarUsuarios pide las dos contrasenas iniciales mediante entrada oculta.
+Solo crea usuarios inexistentes segun el inicializador actual; no cambia claves existentes.
+La base backend/ecoinvest_fallback.db debe existir con esquema valido. No se crea ni migra.
 Las consultas posteriores de usuarios al backend pueden contactar SENACE/BCRP.
 Ctrl+C termina el lanzador; finally espera al hijo y lo termina si sigue activo.
 No se eliminan snapshots. La terminacion forzada no equivale a un cierre graceful.
 .EXAMPLE
 .\Iniciar-EcoInvestLocal.ps1 -Lkg -CargarSenace
+.EXAMPLE
+.\Iniciar-EcoInvestLocal.ps1 -Lkg -CargarSenace -InicializarUsuarios
+# Solo cuando faltan los usuarios iniciales; requiere autorizar escrituras de usuarios.
 .EXAMPLE
 .\Iniciar-EcoInvestLocal.ps1 -CargarSenace
 # LKG desactivado; se conservan los JSON previos.
@@ -24,6 +30,7 @@ No se eliminan snapshots. La terminacion forzada no equivale a un cierre gracefu
 param(
     [switch]$Lkg,
     [switch]$CargarSenace,
+    [switch]$InicializarUsuarios,
     [string]$SnapshotDir,
     [string]$JavaHome = 'C:\Program Files\Java\jdk-17'
 )
@@ -33,6 +40,7 @@ $ErrorActionPreference = 'Stop'
 $backendRoot = [IO.Path]::GetFullPath($PSScriptRoot)
 $repositoryRoot = [IO.Directory]::GetParent($backendRoot).FullName
 $senaceValues = $null
+$authValues = $null
 $javaProcess = $null
 $startInfo = $null
 $safeFailure = $null
@@ -67,10 +75,9 @@ function Assert-LocalProfile([string]$Text) {
     $actual = @($Text -split '\r?\n' | ForEach-Object { ($_ -replace '#.*$', '').Trim() } |
         Where-Object { $_.Length -gt 0 }) -join "`n"
     $expected = @(
-        'server:', 'address: 127.0.0.1', 'port: 8081', 'spring:', 'autoconfigure:', 'exclude:',
-        '- org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration',
-        '- org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration',
-        '- org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration'
+        'server:', 'address: 127.0.0.1', 'port: 8081', 'spring:', 'datasource:',
+        'url: jdbc:sqlite:${ECOINVEST_AUTH_DB_PATH}', 'driver-class-name: org.sqlite.JDBC',
+        'jpa:', 'open-in-view: false', 'hibernate:', 'ddl-auto: validate'
     ) -join "`n"
     if ($actual -cne $expected) { Fail-Local 'PERFIL_LOCAL_CAMBIO: requiere revision antes de arrancar' }
 }
@@ -91,11 +98,17 @@ function Assert-ProductionJar([string]$Jar) {
     if (@($inputs | Where-Object { $_.LastWriteTimeUtc -gt $jarDate }).Count -gt 0) {
         Fail-Local 'JAR_DESACTUALIZADO: empaquetar cambios antes de arrancar'
     }
-    # Conservative source guard: a new persistence bean or automatic startup task needs review.
+    # Only the reviewed authentication repository/bootstrap may introduce persistence/startup work.
+    $reviewedAuthenticationSources = @(
+        [IO.Path]::GetFullPath((Join-Path $backendRoot 'src\main\java\com\ecoinvest\soa\repository\UsuarioRepository.java')),
+        [IO.Path]::GetFullPath((Join-Path $backendRoot 'src\main\java\com\ecoinvest\soa\config\UsuariosInicialesConfig.java'))
+    )
     $sensitivePattern = '\b(DataSource|EntityManagerFactory|EntityManager|JpaRepository|JdbcTemplate|ApplicationRunner|CommandLineRunner|InitializingBean|SmartLifecycle)\b|@(EnableJpaRepositories|PostConstruct|Scheduled|EventListener)\b|initMethod\s*='
     foreach ($source in @($inputs | Where-Object { $_.Extension -eq '.java' })) {
         if ([regex]::IsMatch([IO.File]::ReadAllText($source.FullName), $sensitivePattern)) {
-            Fail-Local 'COMPONENTE_DE_ARRANQUE_O_PERSISTENCIA_REQUIERE_REVISION'
+            if ($reviewedAuthenticationSources -notcontains $source.FullName) {
+                Fail-Local 'COMPONENTE_DE_ARRANQUE_O_PERSISTENCIA_REQUIERE_REVISION'
+            }
         }
     }
     Add-Type -AssemblyName System.IO.Compression.FileSystem
@@ -105,13 +118,13 @@ function Assert-ProductionJar([string]$Jar) {
         if ($manifest -notmatch '(?m)^Start-Class: com\.ecoinvest\.soa\.SoaApplication\s*$') {
             Fail-Local 'JAR_NO_ES_LA_APLICACION_PRODUCTIVA'
         }
-        foreach ($name in @('application.yml', 'application-integracion-local.yml')) {
+        foreach ($name in @('application.yml', 'application-local-auth.yml')) {
             $packed = Read-ZipText $archive ('BOOT-INF/classes/' + $name)
             $source = [IO.File]::ReadAllText((Join-Path $backendRoot ('src\main\resources\' + $name)))
             if ((Normalize-Config $packed) -cne (Normalize-Config $source)) {
                 Fail-Local 'CONFIGURACION_JAR_DESACTUALIZADA'
             }
-            if ($name -eq 'application-integracion-local.yml') { Assert-LocalProfile $packed }
+            if ($name -eq 'application-local-auth.yml') { Assert-LocalProfile $packed }
         }
         foreach ($type in @('snapshot/SnapshotConfiguration', 'snapshot/JsonFileSnapshotRepository',
                 'snapshot/SnapshotStatusService', 'client/SenaceSnapshotCoordinator',
@@ -197,6 +210,36 @@ function Read-SenaceConfiguration {
     return $values
 }
 
+function Read-InitialPasswords {
+    $values = @{}
+    foreach ($account in @(
+        @{ Name = 'admin'; Variable = 'ECOINVEST_ADMIN_PASSWORD' },
+        @{ Name = 'analista'; Variable = 'ECOINVEST_ANALISTA_PASSWORD' }
+    )) {
+        $secure = $null; $confirmation = $null; $text = $null; $confirmed = $null
+        $pointer = [IntPtr]::Zero; $confirmationPointer = [IntPtr]::Zero
+        try {
+            $secure = Read-Host -Prompt ('Contrasena inicial de ' + $account.Name) -AsSecureString
+            $confirmation = Read-Host -Prompt ('Confirmar contrasena de ' + $account.Name) -AsSecureString
+            $pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+            $confirmationPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($confirmation)
+            $text = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer)
+            $confirmed = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($confirmationPointer)
+            if ([string]::IsNullOrWhiteSpace($text)) { Fail-Local 'CONTRASENA_INICIAL_VACIA' }
+            if (-not $text.Equals($confirmed, [StringComparison]::Ordinal)) { Fail-Local 'CONTRASENAS_NO_COINCIDEN' }
+            if ([Text.Encoding]::UTF8.GetByteCount($text) -gt 72) { Fail-Local 'CONTRASENA_SUPERA_LIMITE_BCRYPT_72_BYTES' }
+            $values[$account.Variable] = $text
+        } finally {
+            if ($pointer -ne [IntPtr]::Zero) { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer) }
+            if ($confirmationPointer -ne [IntPtr]::Zero) { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($confirmationPointer) }
+            if ($null -ne $secure) { $secure.Dispose() }
+            if ($null -ne $confirmation) { $confirmation.Dispose() }
+            $text = $null; $confirmed = $null
+        }
+    }
+    return $values
+}
+
 function New-JavaStartInfo([string[]]$Arguments) {
     $info = [Diagnostics.ProcessStartInfo]::new()
     $info.FileName = Join-Path $JavaHome 'bin\java.exe'
@@ -226,6 +269,11 @@ function Write-SafeJavaLine([string]$Line) {
     if ($null -ne $senaceValues) {
         $secret = $senaceValues['SENACE_AUTH_KEY']
         $Line = $Line.Replace($secret, '[CREDENCIAL OMITIDA]').Replace([Uri]::EscapeDataString($secret), '[CREDENCIAL OMITIDA]')
+    }
+    if ($null -ne $authValues) {
+        foreach ($secret in $authValues.Values) {
+            $Line = $Line.Replace($secret, '[CONTRASENA OMITIDA]').Replace([Uri]::EscapeDataString($secret), '[CONTRASENA OMITIDA]')
+        }
     }
     $Line = [regex]::Replace($Line, '(?i)https?://\S+', '[URL OMITIDA]')
     $Line = [regex]::Replace($Line, 'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+', '[JWT OMITIDO]')
@@ -264,10 +312,16 @@ try {
     $jarPath = Join-Path $backendRoot 'target\soa-0.0.1-SNAPSHOT.jar'
     Assert-ProductionJar $jarPath
     $snapshotPath = Resolve-SnapshotDirectory $SnapshotDir
+    $authDatabasePath = Join-Path $backendRoot 'ecoinvest_fallback.db'
+    Assert-NoReparsePoint $authDatabasePath
+    if (-not [IO.File]::Exists($authDatabasePath)) {
+        Fail-Local 'BASE_USUARIOS_AUSENTE_EN_BACKEND: no se crea ni selecciona otra base automaticamente'
+    }
     if (@([Net.NetworkInformation.IPGlobalProperties]::GetIPGlobalProperties().GetActiveTcpListeners() |
             Where-Object { $_.Port -eq 8081 }).Count -gt 0) { Fail-Local 'PUERTO_8081_OCUPADO: no se detienen procesos ajenos' }
 
     if ($CargarSenace) { $senaceValues = Read-SenaceConfiguration }
+    if ($InicializarUsuarios) { $authValues = Read-InitialPasswords }
     if ($Lkg) {
         [IO.Directory]::CreateDirectory($snapshotPath) | Out-Null
         Assert-NoReparsePoint $snapshotPath
@@ -277,15 +331,12 @@ try {
             [IO.FileShare]::None, 4096, [IO.FileOptions]::DeleteOnClose)
         try { $probe.WriteByte(0); $probe.Flush($true) } finally { $probe.Dispose() }
     }
-    $exclusions = 'org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,' +
-        'org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,' +
-        'org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration'
     $javaArguments = @(
         '-jar', $jarPath,
-        '--spring.profiles.active=integracion-local', '--spring.profiles.include=',
+        '--spring.profiles.active=local-auth', '--spring.profiles.include=',
         '--spring.config.location=classpath:/application.yml', '--spring.config.additional-location=', '--spring.config.import=',
-        '--server.address=127.0.0.1', '--server.port=8081', ('--spring.autoconfigure.exclude=' + $exclusions),
-        '--spring.jpa.hibernate.ddl-auto=none', ('--ecoinvest.snapshots.enabled=' + $Lkg.IsPresent.ToString().ToLowerInvariant()),
+        '--server.address=127.0.0.1', '--server.port=8081', '--spring.autoconfigure.exclude=',
+        '--spring.jpa.hibernate.ddl-auto=validate', '--spring.jpa.open-in-view=false', ('--ecoinvest.snapshots.enabled=' + $Lkg.IsPresent.ToString().ToLowerInvariant()),
         '--ecoinvest.snapshots.senace-stale-after=PT24H', '--ecoinvest.snapshots.senace-max-age=P90D',
         '--ecoinvest.snapshots.bcrp-stale-after=P7D', '--ecoinvest.snapshots.bcrp-max-age=P365D',
         '--external.apis.bcrp-base-url=https://estadisticas.bcrp.gob.pe/estadisticas/series/api',
@@ -293,11 +344,19 @@ try {
     )
     $startInfo = New-JavaStartInfo $javaArguments
     $startInfo.EnvironmentVariables['ECOINVEST_SNAPSHOT_DIR'] = $snapshotPath
+    $startInfo.EnvironmentVariables['ECOINVEST_AUTH_DB_PATH'] = $authDatabasePath.Replace('\', '/')
+    if ($InicializarUsuarios) {
+        foreach ($name in @('ECOINVEST_ADMIN_PASSWORD', 'ECOINVEST_ANALISTA_PASSWORD')) {
+            $startInfo.EnvironmentVariables[$name] = $authValues[$name]
+        }
+    }
     if ($CargarSenace) {
         $startInfo.EnvironmentVariables['SENACE_BASE_URL'] = $senaceValues['SENACE_BASE_URL']
         $startInfo.EnvironmentVariables['SENACE_AUTH_KEY'] = $senaceValues['SENACE_AUTH_KEY']
     }
-    Write-Host 'EcoInvest real local: Oracle JDK 17.0.12; perfil unico integracion-local; bind 127.0.0.1:8081.'
+    Write-Host 'EcoInvest real local: Oracle JDK 17.0.12; perfil unico local-auth; bind 127.0.0.1:8081.'
+    Write-Host 'Autenticacion: SQLite backend/ecoinvest_fallback.db; esquema validate, sin actualizacion automatica.'
+    Write-Host ('Usuarios iniciales: ' + $(if ($InicializarUsuarios) { 'claves suministradas solo al hijo Java; no se cambian usuarios existentes.' } else { 'sin claves iniciales; si falta un usuario, reiniciar con -InicializarUsuarios.' }))
     Write-Host ('LKG: ' + $(if ($Lkg) { 'HABILITADO; SENACE PT24H/P90D, BCRP P7D/P365D.' } else { 'DESACTIVADO; JSON existentes conservados.' }))
     if ($Lkg) { Write-Host ('Directorio JSON: ' + $snapshotPath + '; publicacion atomica pendiente de una escritura SAVED.') }
     Write-Host ('Configuracion SENACE: ' + $(if ($CargarSenace) { 'suministrada exclusivamente al hijo Java.' } else { 'no cargada; no se hereda del entorno.' }))
@@ -342,6 +401,7 @@ try {
     }
     if ($null -ne $startInfo) { $startInfo.EnvironmentVariables.Clear() }
     if ($null -ne $senaceValues) { $senaceValues.Clear(); $senaceValues = $null }
+    if ($null -ne $authValues) { $authValues.Clear(); $authValues = $null }
     # No global environment edits, snapshots deletion, imports or persistent credential copies.
 }
 if ($null -ne $safeFailure) { throw [InvalidOperationException]::new($safeFailure) }

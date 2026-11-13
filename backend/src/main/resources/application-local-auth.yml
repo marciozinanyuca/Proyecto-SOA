@@ -1,0 +1,14 @@
+# Perfil local real con autenticacion: distinto de integracion-local, usado en pruebas sin JPA.
+# La ruta es obligatoria y absoluta en el lanzador; no seleccionar otra SQLite por el cwd del IDE.
+server:
+  address: 127.0.0.1
+  port: 8081
+
+spring:
+  datasource:
+    url: jdbc:sqlite:${ECOINVEST_AUTH_DB_PATH}
+    driver-class-name: org.sqlite.JDBC
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate

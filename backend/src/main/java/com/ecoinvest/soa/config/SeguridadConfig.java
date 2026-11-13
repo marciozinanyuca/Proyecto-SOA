@@ -23,6 +23,12 @@ public class SeguridadConfig {
                         "/api/auth/csrf"
                 ).permitAll()
 
+                // Render debe comprobar el proceso sin credenciales ni consultas a proveedores.
+                // Los demas endpoints actuator conservan la restriccion de administrador.
+                .requestMatchers(org.springframework.http.HttpMethod.GET,
+                        "/actuator/health", "/actuator/health/liveness", "/actuator/health/readiness"
+                ).permitAll()
+
                 .requestMatchers(
                         "/api/dashboard",
                         "/api/consultoras",

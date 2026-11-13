@@ -1,0 +1,58 @@
+# Render con autenticacion SQLite. No importa configuracion ni bases locales.
+# ECOINVEST_AUTH_DB_PATH debe apuntar a un directorio escribible del contenedor.
+# La durabilidad depende de un disco persistente; /app/data es efimero sin uno.
+server:
+  address: 0.0.0.0
+  port: ${PORT:10000}
+  forward-headers-strategy: framework
+  servlet:
+    session:
+      timeout: 30m
+      tracking-modes: cookie
+      cookie:
+        http-only: true
+        secure: true
+        same-site: lax
+        path: /
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
+
+spring:
+  datasource:
+    url: jdbc:sqlite:${ECOINVEST_AUTH_DB_PATH}
+    driver-class-name: org.sqlite.JDBC
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:db/render-auth-schema.sql
+      continue-on-error: false
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+
+ecoinvest:
+  snapshots:
+    enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+  health:
+    db:
+      enabled: false
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

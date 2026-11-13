@@ -28,6 +28,7 @@ public class Usuario {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(columnDefinition = "INTEGER")
     @Setter(AccessLevel.NONE)
     private Long id;
 

@@ -1,0 +1,16 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="EcoInvest local (Java 17 y login)" type="Application" factoryName="Application">
+    <option name="ALTERNATIVE_JRE_PATH" value="C:/Program Files/Java/jdk-17" />
+    <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+    <option name="MAIN_CLASS_NAME" value="com.ecoinvest.soa.SoaApplication" />
+    <module name="soa" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/backend" />
+    <option name="PROGRAM_PARAMETERS" value="--spring.profiles.active=local-auth --spring.profiles.include= --spring.config.location=classpath:/application.yml --spring.config.additional-location= --spring.config.import= --spring.autoconfigure.exclude= --server.address=127.0.0.1 --server.port=8081 --spring.jpa.hibernate.ddl-auto=validate --spring.jpa.open-in-view=false --ecoinvest.snapshots.enabled=false" />
+    <envs>
+      <env name="ECOINVEST_AUTH_DB_PATH" value="$PROJECT_DIR$/backend/ecoinvest_fallback.db" />
+    </envs>
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

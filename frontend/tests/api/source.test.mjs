@@ -123,7 +123,7 @@ test('única capacidad HTTP usa GET Monitor y opciones seguras del cliente exist
   const response = await api.estadoServicios();
   assert.equal(response.mode, 'http'); assert.equal(response.status, 200); assert.equal(observed.length, 1);
   assert.equal(observed[0].url, 'http://127.0.0.1:8081/api/estado-servicios');
-  assert.equal(observed[0].init.method, 'GET'); assert.equal(observed[0].init.credentials, 'omit');
+  assert.equal(observed[0].init.method, 'GET'); assert.equal(observed[0].init.credentials, 'same-origin');
   assert.equal(observed[0].init.redirect, 'error'); assert.equal(observed[0].init.headers.Authorization, undefined);
 });
 
@@ -183,7 +183,7 @@ test('capacidad Consultoras solo ejecuta su GET, no Monitor ni otros recursos', 
   assert.ok(blocked.every(result => result.issue === 'CONFIGURACION_INVALIDA')); assert.equal(requests.length, 0);
   await api.consultoras(); assert.equal(requests.length, 1);
   assert.equal(requests[0].url, 'http://127.0.0.1:8081/api/consultoras');
-  assert.equal(requests[0].init.method, 'GET'); assert.equal(requests[0].init.credentials, 'omit');
+  assert.equal(requests[0].init.method, 'GET'); assert.equal(requests[0].init.credentials, 'same-origin');
   assert.equal(requests[0].init.redirect, 'error'); assert.equal(requests[0].init.headers.Authorization, undefined);
 });
 
@@ -213,7 +213,7 @@ test('7C3 crear capacidad no consulta; Dashboard solo permite GET parametrizado 
   assert.equal(calls[0].url.pathname, '/api/dashboard');
   assert.equal(calls[0].url.searchParams.get('sector'), 'Actividad artificial con espacios');
   assert.equal(calls[0].url.searchParams.get('anio'), '2020');
-  assert.equal(calls[0].init.credentials, 'omit'); assert.equal(calls[0].init.redirect, 'error');
+  assert.equal(calls[0].init.credentials, 'same-origin'); assert.equal(calls[0].init.redirect, 'error');
 });
 
 test('7C3 permiso antiguo no crea Dashboard ni inicia fetch', () => {

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createApiClient } from '../../.api-test-build/api/client.js';
 import { createMockFetch } from '../../.api-test-build/mocks/mockFetch.js';
 
-test('cuatro rutas, parametros y transporte GET sin credenciales', async () => {
+test('cuatro rutas, parametros y transporte GET con sesion limitada al mismo origen', async () => {
   const calls = [];
   const api = createApiClient({ mode: 'http', baseUrl: 'http://localhost:8081', fetcher: async (url, init) => {
     calls.push({ url, init }); return new Response('{}');
@@ -14,7 +14,21 @@ test('cuatro rutas, parametros y transporte GET sin credenciales', async () => {
   assert.deepEqual(calls.map(c => c.url.pathname), ['/api/dashboard', '/api/consultoras', '/api/senace/datastream', '/api/estado-servicios']);
   assert.equal(calls[0].url.searchParams.get('sector'), 'Minería & prueba');
   assert.equal(calls[0].url.searchParams.get('anio'), '2017');
-  for (const { init } of calls) { assert.equal(init.method, 'GET'); assert.equal(init.credentials, 'omit'); assert.equal(init.redirect, 'error'); }
+  for (const { init } of calls) { assert.equal(init.method, 'GET'); assert.equal(init.credentials, 'same-origin'); assert.equal(init.redirect, 'error'); }
+});
+
+test('transporte mock omite cookies y 401 HTTP conserva el error sin cambiar de fuente', async () => {
+  let mockCredentials;
+  await createApiClient({ mode: 'mock', fetcher: async (_, init) => {
+    mockCredentials = init.credentials; return new Response('[]');
+  } }).consultoras();
+  assert.equal(mockCredentials, 'omit');
+  let calls = 0;
+  const result = await createApiClient({ mode: 'http', baseUrl: 'http://localhost:5173', fetcher: async (_, init) => {
+    calls++; assert.equal(init.credentials, 'same-origin');
+    return new Response('{}', { status: 401 });
+  } }).estadoServicios();
+  assert.equal(calls, 1); assert.equal(result.status, 401); assert.equal(result.mode, 'http');
 });
 
 test('anio y nombre omitidos permiten defaults del contrato, no anio inventado', async () => {
